@@ -1,0 +1,35 @@
+import type { LevelDef } from '../format.ts';
+
+export const gentlyDownTheDomeLevel: LevelDef = {
+  id: 'gently-down-the-dome',
+  title: 'Gently Down the Dome',
+  tier: 1,
+  hint: 'It is a long way down to the observatory floor. Pack a puff for everyone.',
+  theme: 'observatory',
+  width: 400,
+  height: 160,
+  lemmings: 12,
+  saveRequired: 6,
+  releaseRate: 50,
+  timeLimitSeconds: 300,
+  skills: { floater: 11 },
+  entrances: [{ x: 24, y: 20 }],
+  exits: [{ x: 304, y: 144 }],
+  terrain: [
+    { kind: 'ellipse', cx: 288, cy: 160, rx: 150, ry: 152, fill: 'bricks' },
+    { kind: 'ellipse', cx: 288, cy: 160, rx: 143, ry: 145, op: 'erase' },
+    { kind: 'rect', x: 0, y: 96, w: 400, h: 64, op: 'erase' },
+    { kind: 'rect', x: 0, y: 0, w: 216, h: 96, op: 'erase' },
+    { kind: 'rect', x: 0, y: 48, w: 40, h: 112, fill: 'bricks' },
+    { kind: 'rect', x: 40, y: 48, w: 136, h: 6, fill: 'bricks' },
+    { kind: 'polygon', points: [[40, 54], [40, 72], [68, 54]], fill: 'bricks' },
+    { kind: 'rect', x: 40, y: 144, w: 360, h: 16, fill: 'solid' },
+    { kind: 'rect', x: 56, y: 144, w: 96, h: 12, op: 'erase' },
+    { kind: 'rect', x: 352, y: 112, w: 32, h: 32, fill: 'bricks' },
+    { kind: 'polygon', points: [[358, 112], [368, 112], [398, 74], [390, 68]], fill: 'solid' },
+    { kind: 'ellipse', cx: 362, cy: 112, rx: 6, ry: 5, op: 'behind', fill: 'solid' },
+  ],
+  hazards: [
+    { kind: 'water', x: 56, y: 148, w: 96, h: 12 },
+  ],
+};

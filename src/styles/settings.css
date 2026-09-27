@@ -1,0 +1,214 @@
+/* Settings screen + rebinding (e3b1-settings). DESIGN §7.11 (fields), §5.4 (fieldsets/legends,
+ * native controls, 44px rows), §6.1.2 (Controls: key chips, capture, clash Swap/Cancel).
+ * `.screen`, `.screen__title`, `.button` are shared (layout.css / base.css, not owned here).
+ * Only `var(--token)` values, per project rule. */
+
+.screen--settings {
+  width: 100%;
+  max-width: 44rem;
+  align-items: stretch;
+  text-align: left;
+  gap: var(--space-4);
+}
+
+.screen--settings fieldset {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.screen--settings legend {
+  padding: 0 var(--space-2);
+  font: 700 var(--text-lg) / 1.2 var(--font-ui);
+  color: var(--color-text);
+}
+
+/* One field per row, ≥44px tall (DESIGN §5.4 "44 px rows"). */
+.settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--min-target);
+}
+
+.settings-row--inline {
+  align-items: stretch; /* lets the label (below) stretch to the row's full 44px height */
+  gap: var(--space-2);
+}
+
+.settings-row__label {
+  flex: 1 1 14rem;
+  font-weight: 600;
+}
+
+.settings-row input[type='range'] {
+  flex: 2 1 12rem;
+  block-size: var(--min-target); /* 44px — DESIGN §7.1 A1 / §7.8 "nothing is < 24×24", 44 preferred */
+  accent-color: var(--color-accent);
+}
+
+.settings-output {
+  min-width: 4ch;
+  text-align: right;
+  font: 700 var(--text-sm) / 1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+}
+
+.settings-row--inline input[type='checkbox'] {
+  flex: 0 0 auto;
+  align-self: center;
+  inline-size: var(--space-6); /* 24px — DESIGN §7.1 A1 / §7.8 "nothing is < 24×24" */
+  block-size: var(--space-6);
+  accent-color: var(--color-accent);
+}
+
+/* The label stretches to fill the rest of the row (height from `align-items: stretch` above,
+ * width via `flex: 1`) so clicking anywhere in the row — not just the text — toggles the field,
+ * while keeping the visible label + `for`/`id` association (DESIGN §7.1 A1 target size). */
+.settings-row--inline label {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-height: var(--min-target);
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+
+/* Radio groups (Scale, Motion, Cursor size, Captions, Announcements, Game speed): a nested
+ * fieldset so each keeps its own <legend>, laid out as a wrapping row of label+input pairs. */
+.settings-subgroup {
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.settings-subgroup legend {
+  font: 600 var(--text-sm) / 1.2 var(--font-ui);
+  color: var(--color-text-muted);
+}
+
+.settings-radio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+}
+
+.settings-radio {
+  display: flex;
+  align-items: stretch; /* lets the label (below) stretch to the row's full 44px height */
+  gap: var(--space-2);
+  min-height: var(--min-target);
+}
+
+.settings-radio input[type='radio'] {
+  flex: 0 0 auto;
+  align-self: center;
+  inline-size: var(--space-6); /* 24px — DESIGN §7.1 A1 / §7.8 "nothing is < 24×24" */
+  block-size: var(--space-6);
+  accent-color: var(--color-accent);
+}
+
+/* Stretches to fill the option's full height/width so clicking anywhere on it (not just the
+ * text) selects the radio, while keeping the visible label + `for`/`id` association. */
+.settings-radio label {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+
+/* ── Controls (rebinding list, settings-controls.ts) ────────────────────────────────────── */
+.settings-controls__hint {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.settings-controls__group + .settings-controls__group {
+  margin-top: var(--space-4);
+}
+
+.settings-controls__group-title {
+  margin: 0 0 var(--space-1);
+  font: 700 var(--text-sm) / 1.2 var(--font-ui);
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+}
+
+.settings-row--controls {
+  border-top: 1px solid var(--color-surface-hover);
+}
+
+.settings-controls__group-title + .settings-row--controls {
+  border-top: none;
+}
+
+.settings-row__keys {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* Key chip: a small button, same "chip in a 44px row" pattern as the HUD filter/follow chips
+ * (DESIGN §7.1 A1: "chips >= 32 high inside a 44 px row count as >= 24 + spacing"). */
+.kbd-btn {
+  min-width: 2.5rem;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  font: 700 var(--text-sm) / 1 var(--font-mono);
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.kbd-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+
+.kbd-btn--empty {
+  color: var(--color-text-faint);
+  font-weight: 500;
+}
+
+.kbd-btn--capturing {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.settings-controls__status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--min-target);
+  margin: 0;
+  padding: 0 var(--space-2);
+  color: var(--color-text-muted);
+}
+
+.settings-controls__status:empty {
+  min-height: 0;
+  padding: 0;
+}
+
+/* ── Shared "Saved" status (whole screen) ───────────────────────────────────────────────── */
+.settings-status {
+  min-height: 1.5em;
+  margin: 0;
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.settings-status:empty {
+  min-height: 0;
+}

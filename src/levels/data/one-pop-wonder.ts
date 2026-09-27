@@ -1,0 +1,32 @@
+import type { LevelDef } from '../format.ts';
+
+export const onePopWonderLevel: LevelDef = {
+  id: 'one-pop-wonder',
+  title: 'One-Pop Wonder',
+  tier: 2,
+  hint: 'Steel walls, a brick floor, and one brave volunteer.',
+  theme: 'foundry',
+  width: 480,
+  height: 160,
+  lemmings: 20,
+  saveRequired: 15,
+  releaseRate: 50,
+  timeLimitSeconds: 240,
+  skills: { bomber: 2, basher: 2 },
+  entrances: [{ x: 124, y: 24 }],
+  exits: [{ x: 424, y: 104 }],
+  terrain: [
+    { kind: 'rect', x: 96, y: 32, w: 8, h: 48, material: 'steel' },
+    { kind: 'rect', x: 148, y: 32, w: 8, h: 48, material: 'steel' },
+    { kind: 'rect', x: 104, y: 56, w: 44, h: 6, fill: 'bricks' },
+    { kind: 'rect', x: 120, y: 56, w: 8, h: 6, material: 'steel' },
+    { kind: 'rect', x: 0, y: 104, w: 480, h: 56, fill: 'bricks' },
+    { kind: 'rect', x: 0, y: 40, w: 32, h: 64, fill: 'bricks' },
+    { kind: 'rect', x: 320, y: 40, w: 32, h: 64, fill: 'solid' },
+    { kind: 'rect', x: 32, y: 72, w: 64, h: 4, fill: 'solid' },
+    { kind: 'rect', x: 156, y: 72, w: 164, h: 4, fill: 'solid' },
+    { kind: 'ellipse', cx: 440, cy: 60, rx: 14, ry: 14, fill: 'solid' },
+    { kind: 'ellipse', cx: 440, cy: 60, rx: 6, ry: 6, op: 'erase' },
+    { kind: 'rect', x: 436, y: 74, w: 8, h: 30, fill: 'solid' },
+  ],
+};

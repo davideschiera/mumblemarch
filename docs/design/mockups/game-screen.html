@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Mumblemarch — game screen mockup</title>
+<link rel="stylesheet" href="mockup.css" />
+<style>
+  body { padding: 16px 0 40px; }
+  .gallery { width: 1200px; margin: 40px auto 0; }
+  .gallery h2 { font-size: var(--text-lg); margin: 0 0 12px; }
+  .gallery .row { gap: 12px; align-items: flex-start; }
+  .gallery figure { margin: 0; display: grid; gap: 14px; justify-items: center; }
+  .gallery figcaption { font-size: var(--text-sm); color: var(--color-text-muted); text-align: center; max-width: 11ch; line-height: 1.25; }
+  .note { color: var(--color-text-muted); font-size: var(--text-sm); margin-top: 8px; }
+</style>
+<script src="sprites.js"></script>
+</head>
+<body>
+<main class="game" aria-label="Mumblemarch — level 6, Not One Step Bogward" style="--scale:3">
+  <h1 class="visually-hidden">Level 6 · Not One Step Bogward</h1>
+  <div class="stage">
+    <canvas id="play" width="400" height="160" tabindex="0" role="application" aria-roledescription="playfield"
+      aria-label="Playfield: Not One Step Bogward"></canvas>
+    <div class="pill" aria-hidden="true"><span>⏸ Paused — you can still assign skills</span></div>
+    <div class="toast" aria-hidden="true">Can't dig: steel below</div>
+    <div class="captions" aria-hidden="true"><span>Off we go!</span><span>Uh-oh…</span></div>
+  </div>
+
+  <div class="statusrow">
+    <p class="status" aria-label="Status">
+      <button class="chip" type="button" aria-label="Selection filter: all mumbles">Pick: All</button>
+      <button class="chip" type="button" aria-pressed="true" aria-label="Follow selected mumble">Follow</button>
+      <span class="status__focus">Walker ×3</span>
+      <span class="status__sep"></span>
+      <span>Out 12</span>
+      <span class="status__sep"></span>
+      <span>Saved 3<span class="meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i class="goal"></i></span>need 8</span>
+      <span class="status__sep"></span>
+      <span>Time 4:12</span>
+    </p>
+    <div class="minimap-well"><canvas id="mini" width="320" height="32" tabindex="0" role="slider" aria-label="Level map" aria-valuemin="0" aria-valuemax="1200" aria-valuenow="0" aria-valuetext="Showing 0 to 400 of 1600"></canvas></div>
+  </div>
+
+  <div class="toolbar" role="toolbar" aria-label="Skills and controls" id="toolbar"></div>
+</main>
+
+<section class="gallery" aria-label="Button states">
+  <h2>HUD button states</h2>
+  <div class="row" id="states"></div>
+  <p class="note">Focus ring (cyan) and selection (yellow border + notch + bold) are independent and can combine. “0 left” keeps the button focusable; pressing it gives refusal feedback (✕ badge, shake, “No diggers left”).</p>
+</section>
+
+<script>
+(() => {
+  const ART = window.MUMBLE_ART || null;
+  const SKILLS = ['climber', 'floater', 'bomber', 'blocker', 'builder', 'basher', 'miner', 'digger'];
+  const NAMES = { climber: 'Climber', floater: 'Floater', bomber: 'Bomber', blocker: 'Blocker', builder: 'Builder', basher: 'Basher', miner: 'Miner', digger: 'Digger' };
+  const COUNTS = { climber: 3, floater: 3, bomber: 1, blocker: 2, builder: 5, basher: 0, miner: 2, digger: 3 };
+
+  // ── seeded RNG (mulberry32) ──
+  function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+  // ── pixel helpers ──
+  function palOf(art) { return (art && art.palette) || {}; }
+  function drawRows(ctx, rows, x, y, pal, flip) {
+    const w = Math.max(...rows.map((r) => r.length));
+    rows.forEach((row, j) => [...row].forEach((ch, i) => {
+      const c = pal[ch]; if (!c || ch === '.' || ch === ' ') return;
+      ctx.fillStyle = c; ctx.fillRect(x + (flip ? w - 1 - i : i), y + j, 1, 1);
+    }));
+  }
+  function iconCanvas(name, size) {
+    const c = document.createElement('canvas'); c.width = size; c.height = size;
+    const ctx = c.getContext('2d');
+    const icons = ART && ART.icons;
+    const icon = icons && (icons[name] || (icons.skills && icons.skills[name]));
+    if (icon) {
+      const rows = Array.isArray(icon) ? icon : icon.rows || icon.pixels || icon.frames?.[0];
+      const pal = Object.assign({}, palOf(ART), (icons && icons.palette) || {}, (icon && icon.palette) || {});
+      if (rows) { c.width = Math.max(...rows.map((r) => r.length)); c.height = rows.length; drawRows(c.getContext('2d'), rows, 0, 0, pal, false); return c; }
+    }
+    // placeholder glyph
+    ctx.fillStyle = '#ffc93c'; ctx.font = `bold ${size - 4}px system-ui`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(name[0].toUpperCase(), size / 2, size / 2 + 1);
+    return c;
+  }
+
+  // ── toolbar ──
+  const tb = document.getElementById('toolbar');
+  const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
+  const rr = el(`<div role="group" aria-label="Release rate" class="row" style="gap:4px"></div>`);
+  rr.append(
+    (() => { const b = el(`<button type="button" class="hud-button hud-button--rr" aria-label="Slower release" aria-disabled="true" aria-keyshortcuts="-"></button>`); b.append(iconCanvas('rrMinus', 16)); return b; })(),
+    el(`<div class="rr-value" aria-hidden="true">50<small>1.6 s</small></div>`),
+    (() => { const b = el(`<button type="button" class="hud-button hud-button--rr" aria-label="Faster release" aria-keyshortcuts="="></button>`); b.append(iconCanvas('rrPlus', 16)); return b; })());
+  tb.append(rr, el('<span class="toolbar__sep" aria-hidden="true"></span>'));
+  function skillButton(s, i, opts = {}) {
+    const n = opts.count ?? COUNTS[s];
+    const b = el(`<button type="button" class="skill" data-skill="${s}" aria-pressed="${opts.selected ? 'true' : 'false'}"
+      ${n === 0 ? 'aria-disabled="true"' : ''} aria-keyshortcuts="${i + 1}" aria-label="${NAMES[s]}, ${n === 0 ? 'none' : n} left">
+      <span class="skill__key" aria-hidden="true">${i + 1}</span><span class="skill__count" aria-hidden="true">${n}</span>
+      <span class="skill__name" aria-hidden="true">${NAMES[s]}</span></button>`);
+    b.insertBefore(iconCanvas(s, 16), b.querySelector('.skill__name'));
+    return b;
+  }
+  SKILLS.forEach((s, i) => tb.append(skillButton(s, i, { selected: s === 'builder' })));
+  tb.append(el('<span class="toolbar__sep" aria-hidden="true"></span>'));
+  const ctl = (id, label, extra = '', cls = '') => {
+    const b = el(`<button type="button" class="hud-button ${cls}" ${extra}><span>${label}</span></button>`);
+    b.insertBefore(iconCanvas(id, 16), b.firstChild); return b;
+  };
+  tb.append(ctl('pause', 'Pause', 'aria-pressed="true" aria-keyshortcuts="P"'), ctl('fastForward', 'Fast', 'aria-pressed="false" aria-keyshortcuts="F"'),
+    ctl('popAll', 'Pop all', 'aria-keyshortcuts="N"', 'hud-button--pop'),
+    el('<span class="toolbar__sep" aria-hidden="true"></span>'),
+    el('<button type="button" class="hud-button hud-button--menu" aria-label="Pause menu" aria-keyshortcuts="Escape">☰</button>'));
+
+  // ── state gallery ──
+  const st = document.getElementById('states');
+  const fig = (node, cap) => { const f = el('<figure></figure>'); f.append(node, el(`<figcaption>${cap}</figcaption>`)); return f; };
+  st.append(
+    fig(skillButton('digger', 7, { count: 3 }), 'default'),
+    fig(Object.assign(skillButton('digger', 7, { count: 3 }), { className: 'skill is-hover' }), 'hover'),
+    fig(Object.assign(skillButton('digger', 7, { count: 3 }), { className: 'skill is-focus' }), 'focus-visible'),
+    fig(Object.assign(skillButton('digger', 7, { count: 3 }), { className: 'skill is-active' }), 'pressed'),
+    fig(skillButton('digger', 7, { count: 3, selected: true }), 'selected'),
+    fig(Object.assign(skillButton('digger', 7, { count: 3, selected: true }), { className: 'skill is-focus' }), 'selected + focus'),
+    fig(skillButton('digger', 7, { count: 0 }), '0 left'),
+    fig(Object.assign(skillButton('digger', 7, { count: 0, selected: true }), { className: 'skill is-refused' }), 'selected, 0 left, refused'),
+  );
+  const armed = ctl('popAll', 'Press again', 'aria-keyshortcuts="N"', 'hud-button--pop is-armed');
+  const wrap = el('<div style="position:relative;margin:92px 0 0 190px"></div>');
+  wrap.append(armed, el('<div class="bubble" role="status">Press <b>Pop all</b> again (or <span class="kbd">N</span>) to pop every mumble. <span class="kbd">Esc</span> cancels.</div>'));
+  st.append(fig(wrap, 'Pop all armed'));
+
+  // ── playfield (terrain recipes copied from sprites-themes.html → buildTerrain, per visual spec §5.2) ──
+  const A = ART;
+  const cv = document.getElementById('play'); const ctx = cv.getContext('2d');
+  const TH = A ? A.themes.mossgrove : null;
+  const W = 400, H = 160;
+  const mod = (a, n) => ((a % n) + n) % n;
+  function h2(x, y, s) { let t = (s ^ Math.imul(x, 374761393) ^ Math.imul(y, 668265263)) >>> 0; t = (t + 0x6d2b79f5) >>> 0; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+  function vnoise(x, y, cx, cy, s) { const gx = x / cx, gy = y / cy, ix = Math.floor(gx), iy = Math.floor(gy), fx = gx - ix, fy = gy - iy; const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+    const a = h2(ix, iy, s), b = h2(ix + 1, iy, s), c = h2(ix, iy + 1, s), d = h2(ix + 1, iy + 1, s); return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v; }
+  const PLATE = ['LLLLLLLD', 'LrMMMMrD', 'LdMMMMdD', 'LMMMMMMD', 'LMMMMMMD', 'LrMMMMrD', 'LdMMMMdD', 'DDDDDDDD'];
+  function buildTerrain(prims, th, seed) {
+    const mat = new Uint8Array(W * H), fill = new Array(W * H).fill(null), col = new Uint8Array(W * H);
+    const MAT = { earth: 1, steel: 2 };
+    for (const p of prims) {
+      const m = MAT[p.material || 'earth']; const f = p.fill || (m === 2 ? 'metal' : 'natural');
+      const cover = p.kind === 'rect' ? (x, y) => x >= p.x && y >= p.y && x < p.x + p.w && y < p.y + p.h
+        : (x, y) => ((x + 0.5 - p.cx) / p.rx) ** 2 + ((y + 0.5 - p.cy) / p.ry) ** 2 <= 1;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { if (!cover(x, y)) continue; const i = y * W + x;
+        if (p.op === 'erase') { mat[i] = 0; fill[i] = null; continue; } if (p.op === 'behind' && mat[i]) continue; mat[i] = m; fill[i] = f; }
+    }
+    const t = th.texture, P = th, E = th.earth;
+    const solid = (x, y) => x >= 0 && y >= 0 && x < W && y < H && mat[y * W + x] !== 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x; if (!mat[i]) continue; const f = fill[i];
+      let depth = 0; while (depth < 8 && solid(x, y - depth - 1)) depth++;
+      const edge = !solid(x - 1, y) || !solid(x + 1, y) || !solid(x, y + 1);
+      let c;
+      if (f === 'metal') { const k = PLATE[mod(y, 8)][mod(x, 8)]; c = k === 'L' || k === 'r' ? P.steel[2] : k === 'M' ? P.steel[1] : P.steel[0];
+        if (!solid(x, y - 1)) c = P.steel[2]; if (!solid(x, y + 1) || !solid(x + 1, y)) c = P.steel[0]; if (!solid(x - 1, y)) c = P.steel[2]; }
+      else if (f === 'bricks') { const [bw, bh] = t.brick; const row = Math.floor(y / bh), off = (row % 2) * Math.floor(bw / 2), bx = mod(x + off, bw), by = mod(y, bh);
+        const worn = h2(Math.floor((x + off) / bw), row, seed ^ 0xb1c) < 0.3;
+        c = bx === bw - 1 || by === bh - 1 ? P.bricks[1] : (by === 0 || bx === 0) ? P.brickHi : (worn && h2(x, y, seed ^ 0x77) < 0.35 ? P.brickHi : P.bricks[0]);
+        if (t.mossOnBricks && depth === 0) c = P.surface; }
+      else if (f === 'strata') { const yy = y + Math.round(1.5 * Math.sin((x + (seed % 97)) / 9)); c = t.strataBands[mod(yy, t.strataBands.length)];
+        if (h2(x, y, seed ^ 0x5eed) < 0.08) c = E[1]; if (depth === 0) c = P.surface; }
+      else { const drip = Math.floor(h2(x, 0, seed ^ 0xd1) ** 2 * (t.dripMax + 1));
+        if (depth === 0) c = h2(x, y, seed ^ 0x5a) < 0.18 ? P.surfaceHi : P.surface;
+        else if (depth <= 1 + drip) c = P.surface;
+        else if (depth === 2 + drip) c = h2(x, y, seed ^ 0x5b) < 0.5 ? P.surface : E[3];
+        else { const v = 0.6 * vnoise(x, y, 6, 4, seed) + 0.4 * h2(x, y, seed ^ 0xb0d); let k = v < 0.3 ? 0 : v < 0.5 ? 1 : v < 0.72 ? 2 : 3; if (edge) k = Math.max(k, 1); c = E[k]; } }
+      col[i] = c;
+    }
+    return { mat, col };
+  }
+  // Scene (mossgrove, 400×160 view of a wider level): hatch ledge, dig hole, brick pillar, bog pool, steel slab, exit ledge, flytrap
+  const SCENE = [
+    { kind: 'rect', x: 0, y: 56, w: 150, h: 14 }, { kind: 'ellipse', cx: 60, cy: 70, rx: 70, ry: 9 },
+    { kind: 'rect', x: 0, y: 126, w: 400, h: 34 }, { kind: 'ellipse', cx: 336, cy: 130, rx: 84, ry: 14 },
+    { kind: 'rect', x: 150, y: 96, w: 20, h: 30, fill: 'bricks' },
+    { kind: 'rect', x: 200, y: 126, w: 36, h: 14, op: 'erase' },
+    { kind: 'rect', x: 52, y: 126, w: 9, h: 7, op: 'erase' },
+    { kind: 'rect', x: 256, y: 92, w: 32, h: 12, material: 'steel' },
+    { kind: 'rect', x: 288, y: 80, w: 64, h: 10, fill: 'strata' }, { kind: 'ellipse', cx: 320, cy: 90, rx: 30, ry: 5 },
+  ];
+  const tr = buildTerrain(SCENE, TH, 1234);
+  const img = ctx.createImageData(W, H); const bgN = parseInt(TH.background.slice(1), 16);
+  for (let i = 0; i < W * H; i++) { const hex = tr.mat[i] ? TH.palette[tr.col[i]] : null; const n = hex ? parseInt(hex.slice(1), 16) : bgN; img.data.set([n >> 16, (n >> 8) & 255, n & 255, 255], i * 4); }
+  ctx.putImageData(img, 0, 0);
+  // decor dots (fireflies)
+  ctx.fillStyle = TH.palette[TH.decor]; [[30, 12], [120, 22], [190, 40], [240, 18], [300, 30], [372, 14], [160, 70], [210, 76]].forEach(([x, y]) => ctx.fillRect(x, y, 1, 1));
+  const surfaceY = (x, from) => { for (let y = from; y < H; y++) if (tr.mat[y * W + x]) return y; return H; };
+  const OP = Object.assign({}, A.palette, A.objects.mossgrove.palette);
+  // bog pool
+  const hz = A.objects.mossgrove.hazard; const POOL = { x: 199, y: 129, w: 38, h: 11 };
+  for (let j = 0; j < POOL.h; j++) for (let i = 0; i < POOL.w; i++) { const X = POOL.x + i, Y = POOL.y + j; const ch = j < 3 ? hz.surface[0][j][mod(X, 8)] : hz.deep[mod(Y, 8)][mod(X, 8)]; if (ch === '.') continue; ctx.fillStyle = OP[ch]; ctx.fillRect(X, Y, 1, 1); }
+  // builder stair (6 bricks laid so far) in builderBrick colour, from the pillar top going right
+  ctx.fillStyle = TH.palette[TH.builderBrick]; for (let k = 0; k < 6; k++) ctx.fillRect(172 + k * 2, 125 - k, 6, 1);
+  // objects
+  const obj = (kind, frame, x, y) => { const o = A.objects.mossgrove[kind]; drawRows(ctx, o.frames[frame], x - o.anchorX, y - o.anchorY, OP, false); };
+  obj('entrance', 3, 40, 42);
+  obj('exit', 1, 320, 80);
+  const trap = A.objects.mossgrove.trap; drawRows(ctx, trap.idle[0], 380 - trap.anchorX, surfaceY(380, 100) - trap.anchorY, OP, false);
+  // mumbles
+  function drawMumble(state, frame, x, y, dir) {
+    const s = A.sprites[state]; const rows = s.frames[frame % s.frames.length]; const w = Math.max(...rows.map((q) => q.length));
+    drawRows(ctx, rows, dir === 1 ? x - s.footX : x - (w - 1 - s.footX), y - s.footY, A.palette, dir === -1); return s;
+  }
+  const on = (x, from = 40) => surfaceY(x, from);
+  const M = [
+    ['falling', 1, 40, 50, 1], ['walking', 0, 70, on(70), 1], ['walking', 3, 92, on(92), 1], ['walking', 5, 118, on(118), -1],
+    ['blocking', 0, 140, on(140), 1], ['digging', 0, 56, 133, 1], ['building', 4, 180, 120, 1], ['walking', 2, 106, on(106, 100), 1],
+    ['walking', 6, 126, on(126, 100), 1], ['walking', 1, 250, on(250, 100), -1], ['floating', 6, 296, 50, 1], ['walking', 4, 330, on(330, 60), 1],
+    ['exiting', 1, 320, 80, 1],
+  ];
+  M.forEach((m) => drawMumble(...m));
+  // bomber with countdown "3" (digit top-left at (x−2, y−footY−9), per visual spec §3)
+  const bx = 362, by = on(362, 100); const bs = drawMumble('walking', 7, bx, by, -1);
+  drawRows(ctx, A.overlays.digits['3'], bx - 2, by - bs.footY - 9, A.palette, false);
+  const fz = A.overlays.fuse; drawRows(ctx, fz.frames[0], bx - fz.anchorX, by - bs.footY - fz.anchorY + 1, A.palette, false);
+  // builder brick pips above the builder (13×5 plate at (x−6, y−footY−7)); 6 left
+  const P = A.overlays.pips; const pipRows = []; for (let j = 0; j < P.h; j++) { let r = ''; for (let i = 0; i < P.w; i++) { const inPip = j % 2 === 1 && i % 2 === 1; const idx = (j >> 1) * P.cols + (i >> 1); r += inPip ? (idx < 6 ? P.full : P.empty) : P.plate; } pipRows.push(r); }
+  drawRows(ctx, pipRows, 180 - 6, 120 - A.sprites.building.footY - 7, A.palette, false);
+  // hover bracket (pointer) on a walker; keyboard selection on another; crosshair = keyboard cursor
+  const ov = (name, x, y) => { const o = A.overlays[name]; drawRows(ctx, o.rows, x - o.anchorX, y - o.anchorY, A.palette, false); };
+  ov('hover', 106, on(106, 100));
+  ov('selected', 92, on(92));
+  ov('crosshair', 244, 60);
+  // steel spark where a basher met the slab (refused) + refusal ✕
+  drawMumble('walking', 0, 248, on(248, 100), 1);
+  const sp = A.overlays.steelSpark; drawRows(ctx, sp.frames[0], 256 - sp.anchorX, 100 - sp.anchorY, A.palette, false);
+  ov('refusal', 248, on(248, 100) - 14);
+
+  // minimap (1 CSS px = 5 world px; the scene tiled ×4 to fake a 1600-wide level)
+  const mm = document.getElementById('mini'); const m = mm.getContext('2d');
+  m.fillStyle = '#0c0a1a'; m.fillRect(0, 0, 320, 32);
+  for (let tile = 0; tile < 4; tile++) for (let y = 0; y < H; y += 5) for (let x = 0; x < W; x += 5) {
+    const v = tr.mat[y * W + x]; if (!v) continue;
+    m.fillStyle = v === 2 ? TH.minimap.steel : TH.minimap.terrain; m.fillRect(tile * 80 + x / 5, y / 5, 1, 1);
+  }
+  m.fillStyle = TH.minimap.hazard; m.fillRect(40, 26, 7, 2);
+  m.fillStyle = TH.minimap.exit; m.fillRect(63, 12, 3, 4);
+  m.fillStyle = TH.minimap.mumble; M.forEach((q) => m.fillRect(Math.round(q[2] / 5) - 1, Math.round(q[3] / 5) - 2, 2, 2));
+  m.strokeStyle = TH.minimap.view; m.lineWidth = 2; m.strokeRect(1, 1, 78, 30);
+})();
+</script>
+</body>
+</html>

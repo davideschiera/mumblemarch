@@ -1,0 +1,32 @@
+import type { LevelDef } from '../format.ts';
+
+export const diagonallyYoursLevel: LevelDef = {
+  id: 'diagonally-yours',
+  title: 'Diagonally Yours',
+  tier: 2,
+  hint: 'Straight down is too steep and the steel will not budge. Take the slanted way into the undercroft.',
+  theme: 'observatory',
+  width: 640,
+  height: 160,
+  lemmings: 20,
+  saveRequired: 14,
+  releaseRate: 50,
+  timeLimitSeconds: 300,
+  skills: { miner: 2, basher: 2 },
+  entrances: [{ x: 72, y: 20 }],
+  exits: [{ x: 584, y: 128 }],
+  terrain: [
+    { kind: 'rect', x: 0, y: 128, w: 640, h: 32, fill: 'solid' },
+    { kind: 'rect', x: 0, y: 48, w: 336, h: 80, fill: 'strata' },
+    { kind: 'rect', x: 152, y: 88, w: 184, h: 40, op: 'erase' },
+    { kind: 'rect', x: 336, y: 88, w: 304, h: 40, op: 'erase' },
+    { kind: 'rect', x: 0, y: 120, w: 152, h: 8, material: 'steel' },
+    { kind: 'rect', x: 232, y: 44, w: 104, h: 8, material: 'steel' },
+    { kind: 'rect', x: 320, y: 16, w: 16, h: 32, material: 'steel' },
+    { kind: 'rect', x: 336, y: 48, w: 16, h: 40, fill: 'strata' },
+    { kind: 'rect', x: 336, y: 48, w: 160, h: 6, fill: 'bricks' },
+    { kind: 'rect', x: 480, y: 54, w: 32, h: 74, fill: 'solid' },
+    { kind: 'rect', x: 0, y: 0, w: 24, h: 48, fill: 'bricks' },
+    { kind: 'polygon', points: [[560, 54], [640, 54], [640, 60], [600, 64]], fill: 'bricks' },
+  ],
+};

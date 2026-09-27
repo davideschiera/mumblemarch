@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mumblemarch · sprites &amp; themes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#14112a; --surface:#1f1b3d; --raised:#2c2754; --text:#f7f3ff; --muted:#c9c2e8; --faint:#a39cc7; --accent:#ffc93c; --border:#7a72b8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  h1 { font-size: 28px; margin: 0 0 4px; } h2 { font-size: 20px; margin: 28px 0 8px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+  h3 { font-size: 15px; margin: 12px 0 4px; } p, figcaption { color: var(--muted); margin: 4px 0; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+  .card { background: var(--surface); border: 1px solid #3a3470; border-radius: 10px; padding: 10px; }
+  .card h3 { margin-top: 0; font-family: ui-monospace, Menlo, monospace; color: var(--accent); }
+  .meta { font: 12px/1.4 ui-monospace, Menlo, monospace; color: var(--faint); }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+  .row figure { margin: 0; text-align: center; } .row figcaption { font-size: 12px; }
+  .sw { display: inline-flex; align-items: center; gap: 6px; margin: 2px 10px 2px 0; font: 12px ui-monospace, Menlo, monospace; color: var(--muted); }
+  .sw i { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #0006; display: inline-block; }
+  .theme { display: grid; grid-template-columns: 600px 1fr; gap: 16px; align-items: start; background: var(--surface); border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+  .theme .scene { border-radius: 6px; }
+  table { border-collapse: collapse; font: 12px ui-monospace, Menlo, monospace; }
+  th, td { border: 1px solid #3a3470; padding: 3px 8px; text-align: right; } th:first-child, td:first-child { text-align: left; }
+  td.fail { color: #ff7470; font-weight: 700; } td.ok { color: #72e08e; }
+  .checker { background: repeating-conic-gradient(#2c2754 0 25%, #221e45 0 50%) 0 0 / 8px 8px; }
+  .objs { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 6px; }
+</style>
+</head>
+<body>
+<h1>Mumblemarch — sprites &amp; themes</h1>
+<p>Everything on this page is rendered live from <code>sprites.js</code> (<code>window.MUMBLE_ART</code>). Terrain textures are the procedural recipes from <code>parts/visual.md</code> §5, seeded with mulberry32. Animations run at 17 ticks/s.</p>
+
+<h2>1 · The mumble palette</h2>
+<div id="palette"></div>
+
+<h2>2 · Every state (×4, facing right; red tick = foot anchor)</h2>
+<div class="grid" id="states"></div>
+
+<h2>3 · HUD icons (×3; colour, then the 1-colour high-contrast variant)</h2>
+<div class="row" id="icons"></div>
+
+<h2>4 · Overlays (×4)</h2>
+<div class="row" id="overlays"></div>
+
+<h2>5 · Terrain themes (200×100 world px at ×3)</h2>
+<div id="themes"></div>
+
+<h2>6 · High-contrast "clear physics" view (Mossgrove scene)</h2>
+<div class="theme"><canvas id="hc" class="scene" width="200" height="100" style="width:600px;height:300px"></canvas>
+  <div><p>Flat colours plus one pattern per terrain class: earth (flat + white edge), steel (cross-hatch), one-way (chevrons), water (waves) / fire (zigzag), trap (warning stripes), exit (outline + door glyph). Mumbles are unchanged.</p><div id="hckey"></div></div></div>
+
+<h2>7 · Contrast (WCAG 1.4.11, non-text ≥ 3:1), computed live from the hex values</h2>
+<div id="contrast"></div>
+
+<script src="sprites.js"></script>
+<script>
+(() => {
+  const A = window.MUMBLE_ART;
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs = {}, html = '') => { const e = document.createElement(tag); Object.assign(e, attrs); if (html) e.innerHTML = html; return e; };
+  const W = (rows) => Math.max(...rows.map((r) => r.length));
+  function cv(w, h, s) { const c = el('canvas'); c.width = w; c.height = h; c.style.width = w * s + 'px'; c.style.height = h * s + 'px'; return c; }
+  function draw(ctx, rows, x, y, pal, flip = false) {
+    const w = W(rows);
+    rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) { const ch = row[i]; if (ch === '.') continue; const c = pal[ch]; if (!c) continue; ctx.fillStyle = c; ctx.fillRect(x + (flip ? w - 1 - i : i), y + j, 1, 1); } });
+  }
+  const frameIndex = (s, ticks) => { const n = s.frames.length, i = Math.floor(ticks / s.ticksPerFrame); if (!s.loop) return Math.min(i, n - 1); const lf = s.loopFrom || 0; return i < n ? i : lf + ((i - lf) % (n - lf)); };
+  function drawMumble(ctx, state, ticks, x, y, dir = 1) {
+    const s = A.sprites[state]; const rows = s.frames[frameIndex(s, ticks)]; const w = W(rows);
+    draw(ctx, rows, dir === 1 ? x - s.footX : x - (w - 1 - s.footX), y - s.footY, A.palette, dir === -1);
+    return s;
+  }
+  const ticks = { now: 0 }; const animators = [];
+  // ── 1 palette
+  for (const [k, v] of Object.entries(A.palette)) $('palette').append(el('span', { className: 'sw' }, `<i style="background:${v}"></i>${k} ${v}`));
+  // ── 2 states
+  for (const [name, s] of Object.entries(A.sprites)) {
+    const fw = W(s.frames[0]), fh = s.frames[0].length, sc = 4;
+    const card = el('div', { className: 'card' });
+    card.append(el('h3', {}, name));
+    card.append(el('div', { className: 'meta' }, `${s.frames.length} frames × ${s.ticksPerFrame} tick · ${fw}×${fh} · foot (${s.footX},${s.footY}) · ${s.loop ? 'loop' + (s.loopFrom ? ' from ' + s.loopFrom : '') : 'one-shot'}`));
+    const sheet = cv((fw + 2) * s.frames.length, fh + 3, sc); sheet.className = 'checker';
+    const sx = sheet.getContext('2d');
+    s.frames.forEach((f, i) => { draw(sx, f, i * (fw + 2) + 1, 1, A.palette); sx.fillStyle = '#ff4060'; sx.fillRect(i * (fw + 2) + 1 + s.footX, 1 + s.footY, 1, 1); });
+    const wrap = el('div', { style: 'overflow-x:auto;margin:6px 0' }); wrap.append(sheet); card.append(wrap);
+    const live = cv(name === 'walking' ? 60 : 24, fh + 4, sc); live.className = 'checker'; card.append(live);
+    const lx = live.getContext('2d');
+    animators.push((t) => {
+      lx.clearRect(0, 0, live.width, live.height); lx.fillStyle = '#3a3470'; lx.fillRect(0, fh + 1, live.width, 3);
+      if (name === 'walking') { const x = 6 + (t % 48); drawMumble(lx, 'walking', t, x, fh + 1, 1); }
+      else { const period = s.loop ? 64 : Math.max(24, s.frames.length * s.ticksPerFrame + 12); drawMumble(lx, name, t % period, 12, fh + 1, 1); }
+    });
+    $('states').append(card);
+  }
+  // ── 3 icons
+  const iconPal = A.palette;
+  for (const k of A.icons.meta.order) {
+    const rows = A.icons[k]; const f = el('figure');
+    const c1 = cv(16, 16, 3); draw(c1.getContext('2d'), rows, 0, 0, iconPal);
+    const c2 = cv(16, 16, 3); c2.style.background = '#000'; const mono = Object.fromEntries(Object.keys(iconPal).map((ch) => [ch, A.icons.meta.monoKnockout.includes(ch) ? null : '#ffffff']));
+    draw(c2.getContext('2d'), rows, 0, 0, mono);
+    const box = el('div', { style: 'display:flex;gap:6px;background:#2c2754;padding:6px;border-radius:8px' }); box.append(c1, c2);
+    f.append(box, el('figcaption', {}, A.icons.meta.labels[k])); $('icons').append(f);
+  }
+  // ── 4 overlays
+  const O = A.overlays;
+  function ovFig(label, w, h, fn) { const f = el('figure'); const c = cv(w, h, 4); c.className = 'checker'; fn(c.getContext('2d')); f.append(c, el('figcaption', {}, label)); $('overlays').append(f); }
+  ovFig('digits 0–9 (5×7)', 62, 9, (x) => { for (let d = 0; d < 10; d++) draw(x, O.digits[d], 1 + d * 6, 1, A.palette); });
+  ovFig('bomber: "3" above a walker', 14, 22, (x) => { drawMumble(x, 'walking', 0, 7, 21); draw(x, O.digits[3], 5, 2, A.palette); draw(x, O.fuse.frames[0], 6, 8, A.palette); });
+  function pips(x, px, py, left) { const P = O.pips; for (let j = 0; j < P.h; j++) for (let i = 0; i < P.w; i++) { x.fillStyle = A.palette[P.plate]; x.fillRect(px + i, py + j, 1, 1); }
+    for (let k = 0; k < 12; k++) { const col = k % 6, row = Math.floor(k / 6); const ch = k < left ? (left <= P.warnAt ? P.warn : P.full) : P.empty; x.fillStyle = A.palette[ch]; x.fillRect(px + 1 + col * 2, py + 1 + row * 2, 1, 1); } }
+  ovFig('pips: 12 · 7 · 3 (amber ≤ 3)', 45, 7, (x) => { pips(x, 1, 1, 12); pips(x, 16, 1, 7); pips(x, 31, 1, 3); });
+  ovFig('builder with pips', 16, 20, (x) => { drawMumble(x, 'building', 4, 5, 19); pips(x, 1, 2, 3); });
+  ovFig('hover bracket', 17, 18, (x) => { drawMumble(x, 'walking', 2, 8, 15); draw(x, O.hover.rows, 8 - O.hover.anchorX, 15 - O.hover.anchorY, A.palette); });
+  ovFig('keyboard selection', 16, 22, (x) => { drawMumble(x, 'walking', 2, 8, 19); draw(x, O.selected.rows, 8 - O.selected.anchorX, 19 - O.selected.anchorY, A.palette); });
+  ovFig('crosshair', 11, 11, (x) => draw(x, O.crosshair.rows, 1, 1, A.palette));
+  ovFig('steel spark (2 frames)', 18, 9, (x) => { draw(x, O.steelSpark.frames[0], 1, 1, A.palette); draw(x, O.steelSpark.frames[1], 10, 1, A.palette); });
+  ovFig('refusal ✕', 11, 11, (x) => draw(x, O.refusal.rows, 1, 1, A.palette));
+  ovFig('pending (assigned while paused)', 14, 24, (x) => { drawMumble(x, 'walking', 0, 7, 23); draw(x, O.pending.rows, 7 - O.pending.anchorX, 11 - O.pending.anchorY, A.palette); });
+  ovFig('assign ring (2 frames)', 20, 11, (x) => { draw(x, O.assignRing.frames[0], 1, 2, A.palette); draw(x, O.assignRing.frames[1], 10, 1, A.palette); });
+
+  // ── 5 terrain recipes ────────────────────────────────────────────────────────────────
+  function h2(x, y, s) { let t = (s ^ Math.imul(x, 374761393) ^ Math.imul(y, 668265263)) >>> 0; t = (t + 0x6d2b79f5) >>> 0; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+  function vnoise(x, y, cx, cy, s) { const gx = x / cx, gy = y / cy, ix = Math.floor(gx), iy = Math.floor(gy), fx = gx - ix, fy = gy - iy; const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+    const a = h2(ix, iy, s), b = h2(ix + 1, iy, s), c = h2(ix, iy + 1, s), d = h2(ix + 1, iy + 1, s); return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v; }
+  const mod = (a, n) => ((a % n) + n) % n;
+  const PLATE = ['LLLLLLLD', 'LrMMMMrD', 'LdMMMMdD', 'LMMMMMMD', 'LMMMMMMD', 'LrMMMMrD', 'LdMMMMdD', 'DDDDDDDD'];
+  const CHEV = ['........', 'AAE.....', '.AAE....', '..AAE...', '.AAE....', 'AAE.....', '........', '........'];
+  // material: 0 empty 1 earth 2 steel 3 one-way-right 4 one-way-left ; fill: natural|solid|strata|bricks|metal
+  function buildTerrain(W_, H_, prims, th, seed) {
+    const mat = new Uint8Array(W_ * H_), fill = new Array(W_ * H_).fill(null), col = new Uint8Array(W_ * H_);
+    const MAT = { earth: 1, steel: 2, 'one-way-right': 3, 'one-way-left': 4 };
+    for (const p of prims) {
+      const m = MAT[p.material || 'earth']; const f = p.fill || (m === 2 ? 'metal' : 'natural');
+      const cover = p.kind === 'rect' ? (x, y) => x >= p.x && y >= p.y && x < p.x + p.w && y < p.y + p.h
+        : p.kind === 'ellipse' ? (x, y) => ((x + 0.5 - p.cx) / p.rx) ** 2 + ((y + 0.5 - p.cy) / p.ry) ** 2 <= 1 : null;
+      for (let y = 0; y < H_; y++) for (let x = 0; x < W_; x++) { if (!cover(x, y)) continue; const i = y * W_ + x;
+        if (p.op === 'erase') { mat[i] = 0; fill[i] = null; continue; } if (p.op === 'behind' && mat[i]) continue; mat[i] = m; fill[i] = f; }
+    }
+    const t = th.texture, P = th, E = th.earth;
+    const solid = (x, y) => x >= 0 && y >= 0 && x < W_ && y < H_ && mat[y * W_ + x] !== 0;
+    for (let y = 0; y < H_; y++) for (let x = 0; x < W_; x++) {
+      const i = y * W_ + x; if (!mat[i]) continue; const f = fill[i];
+      let depth = 0; while (depth < 8 && solid(x, y - depth - 1)) depth++;
+      const edge = !solid(x - 1, y) || !solid(x + 1, y) || !solid(x, y + 1);
+      let c;
+      if (f === 'metal') {
+        const k = PLATE[mod(y, 8)][mod(x, 8)]; c = k === 'L' || k === 'r' ? P.steel[2] : k === 'M' ? P.steel[1] : P.steel[0];
+        if (!solid(x, y - 1)) c = P.steel[2]; if (!solid(x, y + 1) || !solid(x + 1, y)) c = P.steel[0]; if (!solid(x - 1, y)) c = P.steel[2];
+      } else if (f === 'bricks') {
+        const [bw, bh] = t.brick; const row = Math.floor(y / bh), off = (row % 2) * Math.floor(bw / 2), bx = mod(x + off, bw), by = mod(y, bh);
+        const worn = h2(Math.floor((x + off) / bw), row, seed ^ 0xb1c) < 0.3;
+        c = bx === bw - 1 || by === bh - 1 ? P.bricks[1] : (by === 0 || bx === 0) ? P.brickHi : (worn && h2(x, y, seed ^ 0x77) < 0.35 ? P.brickHi : P.bricks[0]);
+        if (t.mossOnBricks && depth === 0) c = P.surface;
+      } else if (f === 'strata') {
+        const yy = y + Math.round(1.5 * Math.sin((x + (seed % 97)) / 9));
+        c = t.strataBands[mod(yy, t.strataBands.length)];
+        if (h2(x, y, seed ^ 0x5eed) < 0.08) c = E[1];
+        if (depth === 0) c = P.surface;
+      } else if (f === 'solid') {
+        c = depth === 0 ? P.surface : !solid(x, y + 1) ? E[1] : E[2];
+      } else { // natural
+        const drip = Math.floor(h2(x, 0, seed ^ 0xd1) ** 2 * (t.dripMax + 1));
+        if (depth === 0) c = h2(x, y, seed ^ 0x5a) < 0.18 ? P.surfaceHi : P.surface;
+        else if (depth <= 1 + drip) c = P.surface;
+        else if (depth === 2 + drip) c = h2(x, y, seed ^ 0x5b) < 0.5 ? P.surface : E[3];
+        else { const v = 0.6 * vnoise(x, y, 6, 4, seed) + 0.4 * h2(x, y, seed ^ 0xb0d); let k = v < 0.3 ? 0 : v < 0.5 ? 1 : v < 0.72 ? 2 : 3; if (edge) k = Math.max(k, 1); c = E[k]; }
+      }
+      if (mat[i] === 3 || mat[i] === 4) { // one-way chevrons over the fill
+        const r = Math.floor(y / 8), ox = (r % 2) * 4; let cx = mod(x + ox, 8); const cy = mod(y, 8); if (mat[i] === 4) cx = 7 - cx;
+        const k = CHEV[cy][cx]; if (k === 'A') c = P.oneWay; else if (k === 'E') c = P.oneWayEdge;
+      }
+      col[i] = c;
+    }
+    return { mat, col, W: W_, H: H_ };
+  }
+  const SCENE = [
+    { kind: 'rect', x: 0, y: 74, w: 200, h: 26 },
+    { kind: 'ellipse', cx: 38, cy: 77, rx: 30, ry: 6 },
+    { kind: 'rect', x: 92, y: 74, w: 28, h: 14, op: 'erase' },
+    { kind: 'rect', x: 4, y: 40, w: 54, h: 10, fill: 'strata' },
+    { kind: 'rect', x: 62, y: 62, w: 24, h: 12, fill: 'bricks' },
+    { kind: 'rect', x: 128, y: 56, w: 24, h: 18, material: 'steel' },
+    { kind: 'rect', x: 158, y: 40, w: 12, h: 34, material: 'one-way-right' },
+  ];
+  const POOL = { x: 92, y: 79, w: 28, h: 9 };
+  const HATCH = { x: 22, y: 28 }, EXIT = { x: 186, y: 74 }, TRAP = { x: 48, y: 40 };
+  function surfaceY(tr, x, from) { for (let y = from; y < tr.H; y++) if (tr.mat[y * tr.W + x]) return y; return tr.H; }
+  function terrainCanvas(tr, th, hc) {
+    const c = el('canvas'); c.width = tr.W; c.height = tr.H; const x = c.getContext('2d'); const img = x.createImageData(tr.W, tr.H);
+    const HC = { earth: '#a0a0a0', edge: '#ffffff', steel: '#5f8fff', hatch: '#0a1a4a', oneway: '#c77dff' };
+    for (let i = 0; i < tr.mat.length; i++) { if (!tr.mat[i]) continue; let hex;
+      if (!hc) hex = th.palette[tr.col[i]];
+      else { const px = i % tr.W, py = Math.floor(i / tr.W), m = tr.mat[i]; const s = (a, b) => a >= 0 && b >= 0 && a < tr.W && b < tr.H && tr.mat[b * tr.W + a];
+        const edge = !s(px - 1, py) || !s(px + 1, py) || !s(px, py - 1) || !s(px, py + 1);
+        if (edge) hex = HC.edge; else if (m === 2) hex = (mod(px + py, 4) === 0 || mod(px - py, 4) === 0) ? HC.hatch : HC.steel;
+        else if (m >= 3) { const r = Math.floor(py / 8), ox = (r % 2) * 4; let cx = mod(px + ox, 8); if (m === 4) cx = 7 - cx; const k = CHEV[mod(py, 8)][cx]; hex = k === 'A' ? '#000000' : HC.oneway; }
+        else hex = HC.earth; }
+      const n = parseInt(hex.slice(1), 16); img.data.set([n >> 16, (n >> 8) & 255, n & 255, 255], i * 4); }
+    x.putImageData(img, 0, 0); return c;
+  }
+  function objPal(id) { return Object.assign({}, A.palette, A.objects[id].palette); }
+  function drawPool(x, id, t, hc) {
+    const o = A.objects[id].hazard, P = objPal(id);
+    if (hc) { for (let j = 0; j < POOL.h; j++) for (let i = 0; i < POOL.w; i++) { const X = POOL.x + i, Y = POOL.y + j; let on;
+        if (o.kind === 'water') on = mod(Y - Math.round(Math.sin(X / 2)) , 4) === 0; else on = mod(Y + Math.abs(mod(X, 6) - 3), 4) === 0;
+        x.fillStyle = on ? '#000000' : (o.kind === 'water' ? '#00c8ff' : '#ff7a00'); x.fillRect(X, Y, 1, 1); } return; }
+    const f = o.surface[Math.floor(t / o.surfaceTicksPerFrame) % o.surface.length];
+    for (let j = 0; j < POOL.h; j++) for (let i = 0; i < POOL.w; i++) { const X = POOL.x + i, Y = POOL.y + j;
+      const ch = j < 3 ? f[j][mod(X, 8)] : o.deep[mod(Y, 8)][mod(X, 8)]; if (ch === '.') continue; x.fillStyle = P[ch]; x.fillRect(X, Y, 1, 1); }
+  }
+  function drawObj(x, id, kind, t, ax, ay, hc) {
+    const o = A.objects[id][kind], P = objPal(id);
+    if (kind === 'trap') { const rows = o.idle[Math.floor(t / o.idleTicksPerFrame) % o.idle.length];
+      if (hc) { for (let j = 0; j < 16; j++) for (let i = 0; i < 16; i++) { x.fillStyle = mod(i + j, 6) < 3 ? '#ffd400' : '#000000'; x.fillRect(ax - 8 + i, ay - 6 + j - 10, 1, 1); } return; }
+      draw(x, rows, ax - o.anchorX, ay - o.anchorY, P); return; }
+    const frames = o.frames; let fi = kind === 'entrance' ? Math.min(frames.length - 1, Math.floor(mod(t, 90) / o.ticksPerFrame) - 5) : Math.floor(t / o.ticksPerFrame) % frames.length; if (fi < 0) fi = 0;
+    if (hc && kind === 'exit') { x.strokeStyle = '#3cff6a'; x.lineWidth = 1; x.strokeRect(ax - 7.5, ay - 13.5, 15, 13); x.fillStyle = '#3cff6a'; x.fillRect(ax - 1, ay - 10, 3, 5); return; }
+    draw(x, frames[fi], ax - o.anchorX, ay - o.anchorY, P);
+  }
+  function scene(id, hcCanvas) {
+    const th = A.themes[id]; const seed = 0x1234 + id.length * 7919;
+    const tr = buildTerrain(200, 100, SCENE, th, seed); const hc = !!hcCanvas;
+    const terr = terrainCanvas(tr, th, hc);
+    const c = hcCanvas || cv(200, 100, 3); c.className = 'scene'; const x = c.getContext('2d');
+    const stars = [...Array(26)].map((_, k) => [Math.floor(h2(k, 1, seed) * 200), Math.floor(h2(k, 2, seed) * 36)]);
+    const walkers = [ { y0: 60, x0: 4, x1: 58, off: 0 }, { y0: 60, x0: 4, x1: 58, off: 23 }, { y0: 40, x0: 88, x1: 126, off: 5 }, { y0: 20, x0: 6, x1: 40, off: 9 } ];
+    animators.push((t) => {
+      x.fillStyle = hc ? '#000000' : th.background; x.fillRect(0, 0, 200, 100);
+      if (!hc) { x.fillStyle = th.palette[th.decor]; stars.forEach(([sx, sy], k) => { if ((Math.floor(t / 6) + k) % 5) x.fillRect(sx, sy, 1, 1); }); }
+      x.drawImage(terr, 0, 0);
+      drawPool(x, id, t, hc);
+      drawObj(x, id, 'entrance', t, HATCH.x, HATCH.y, hc);
+      drawObj(x, id, 'exit', t, EXIT.x, EXIT.y, hc);
+      drawObj(x, id, 'trap', t, TRAP.x, TRAP.y, hc);
+      walkers.forEach((w, k) => { const span = w.x1 - w.x0, p = mod(t + w.off * 3, span * 2), dir = p < span ? 1 : -1, wx = w.x0 + (p < span ? p : 2 * span - p); const wy = surfaceY(tr, wx, w.y0); drawMumble(x, 'walking', t + k * 3, wx, wy, dir); });
+      drawMumble(x, 'blocking', t, 74, 62, 1);
+      const bs = drawMumble(x, 'building', t, 136, 56, 1); pips(x, 130, 56 - bs.footY - 7, 12 - (Math.floor(t / 16) % 12));
+      drawMumble(x, 'floating', mod(t, 40) + 4, 106, 50 + Math.floor(mod(t, 40) / 4), 1);
+      drawMumble(x, 'digging', t, 125, 74, 1);
+      const ws = drawMumble(x, 'walking', t, 150, 74, -1); draw(x, A.overlays.digits[5 - Math.floor(mod(t, 80) / 16)], 148, 74 - ws.footY - 9, A.palette); draw(x, A.overlays.fuse.frames[Math.floor(t / 2) % 2], 149, 74 - ws.footY - 2, A.palette);
+      drawMumble(x, 'exiting', mod(t, 20), 186, 74, 1);
+      drawMumble(x, 'climbing', t, 157, 60 - (Math.floor(mod(t, 64) / 8) * 4 % 20), 1);
+    });
+    return c;
+  }
+  for (const [id, th] of Object.entries(A.themes)) {
+    const box = el('div', { className: 'theme' });
+    const c = scene(id); box.append(c);
+    const info = el('div');
+    info.append(el('h3', {}, `${th.name} <span class="meta">(${id})</span>`), el('p', {}, th.mood), el('p', { className: 'meta' }, `hazard: ${th.hazardName} (${th.hazardKind}) · trap: ${th.trapName} · background ${th.background}`));
+    const roles = [['earth', th.earth], ['surface', [th.surface, th.surfaceHi]], ['steel', th.steel], ['bricks', [...th.bricks, th.brickHi]], ['builder', [th.builderBrick]], ['one-way', [th.oneWay, th.oneWayEdge]], ['accent', [th.accent]], ['hazard', th.hazard], ['trap', th.trap], ['hatch', th.hatch], ['exit', th.exit], ['decor', [th.decor]]];
+    const sw = el('div'); roles.forEach(([n, idx]) => sw.append(el('div', { className: 'sw' }, `${n}: ` + idx.map((i) => `<i title="${i} ${th.palette[i]}" style="background:${th.palette[i]}"></i>`).join(''))));
+    info.append(sw);
+    const objs = el('div', { className: 'objs' });
+    const o = A.objects[id], P = objPal(id);
+    const oc = (rows, lbl) => { const f = el('figure', { style: 'margin:0' }); const k = cv(W(rows), rows.length, 3); k.style.background = th.background; draw(k.getContext('2d'), rows, 0, 0, P); f.append(k, el('figcaption', { className: 'meta' }, lbl)); objs.append(f); };
+    o.entrance.frames.forEach((r, i) => oc(r, i ? 'hatch ' + i : 'hatch closed'));
+    oc(o.exit.frames[0], 'exit'); o.trap.idle.forEach((r, i) => oc(r, 'trap idle ' + i)); o.trap.trigger.forEach((r, i) => oc(r, 'trap snap ' + i));
+    info.append(objs); box.append(info); $('themes').append(box);
+  }
+  scene('mossgrove', $('hc'));
+  $('hckey').innerHTML = [['earth', '#a0a0a0'], ['edge', '#ffffff'], ['steel + hatch', '#5f8fff'], ['one-way + chevrons', '#c77dff'], ['water + waves', '#00c8ff'], ['fire + zigzag', '#ff7a00'], ['trap stripes', '#ffd400'], ['exit outline', '#3cff6a']].map(([n, c]) => `<span class="sw"><i style="background:${c}"></i>${n}</span>`).join('');
+  // ── 7 contrast
+  const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const Lum = (hex) => { const n = parseInt(hex.slice(1), 16); return 0.2126 * lin((n >> 16) / 255) + 0.7152 * lin(((n >> 8) & 255) / 255) + 0.0722 * lin((n & 255) / 255); };
+  const ratio = (a, b) => { const [p, q] = [Lum(a), Lum(b)].sort((m, n) => n - m); return (p + 0.05) / (q + 0.05); };
+  const P0 = A.palette; const T = Object.values(A.themes);
+  const pairs = [['body b vs bg', (t) => [P0.b, t.background]], ['outline o vs earth[3]', (t) => [P0.o, t.palette[t.earth[3]]]], ['outline o vs surface', (t) => [P0.o, t.palette[t.surface]]], ['outline o vs surfaceHi', (t) => [P0.o, t.palette[t.surfaceHi]]],
+    ['earth[0] vs bg', (t) => [t.palette[t.earth[0]], t.background]], ['earth[1] (mid) vs bg', (t) => [t.palette[t.earth[1]], t.background]], ['steel[1] vs bg', (t) => [t.palette[t.steel[1]], t.background]], ['steel[0] seam vs bg', (t) => [t.palette[t.steel[0]], t.background]],
+    ['hazard surface vs bg', (t) => [t.palette[t.hazard[0]], t.background]], ['hazard deep vs bg', (t) => [t.palette[t.hazard[1]], t.background]], ['exit rim vs bg', (t) => [t.palette[t.exit[0]], t.background]], ['builder brick vs bg', (t) => [t.palette[t.builderBrick], t.background]]];
+  let html = '<table><tr><th>pair</th>' + T.map((t) => `<th>${t.id}</th>`).join('') + '</tr>';
+  for (const [n, f] of pairs) html += `<tr><td>${n}</td>` + T.map((t) => { const r = ratio(...f(t)); return `<td class="${r >= 3 ? 'ok' : 'fail'}">${r.toFixed(2)}${r >= 3 ? ' ✓' : ' ✗'}</td>`; }).join('') + '</tr>';
+  $('contrast').innerHTML = html + '</table>';
+  // ── animate at 17 ticks/s
+  const t0 = performance.now();
+  function loop(now) { const t = Math.max(0, Math.floor((now - t0) / (1000 / 17))); if (t !== ticks.now) { ticks.now = t; animators.forEach((a) => a(t)); } requestAnimationFrame(loop); }
+  animators.forEach((a) => a(0)); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+import type { LevelDef } from '../format.ts';
+
+export const clamBeforeTheStormLevel: LevelDef = {
+  id: 'clam-before-the-storm',
+  title: 'Clam Before the Storm',
+  tier: 2,
+  hint: 'The giant clam naps after every snack. Send everyone past in one big rush.',
+  theme: 'reef',
+  width: 640,
+  height: 160,
+  lemmings: 40,
+  saveRequired: 28,
+  releaseRate: 20,
+  timeLimitSeconds: 300,
+  skills: { basher: 2 },
+  entrances: [{ x: 96, y: 32 }],
+  exits: [{ x: 576, y: 104 }],
+  terrain: [
+    { kind: 'rect', x: 0, y: 64, w: 176, h: 16, fill: 'strata' },
+    { kind: 'rect', x: 0, y: 24, w: 40, h: 40, fill: 'strata' },
+    { kind: 'rect', x: 160, y: 32, w: 16, h: 32 },
+    { kind: 'rect', x: 176, y: 64, w: 48, h: 16, fill: 'strata' },
+    { kind: 'rect', x: 0, y: 104, w: 640, h: 56, fill: 'strata' },
+    { kind: 'rect', x: 0, y: 80, w: 224, h: 24, fill: 'strata' },
+    { kind: 'polygon', points: [[176, 32], [184, 16], [196, 20], [200, 32]], op: 'behind' },
+    { kind: 'rect', x: 240, y: 0, w: 400, h: 8, fill: 'strata' },
+    { kind: 'polygon', points: [[260, 8], [264, 8], [262, 30]] },
+    { kind: 'polygon', points: [[420, 8], [425, 8], [422, 26]] },
+    { kind: 'stamp', stamp: 'mushroom', x: 612, y: 97, op: 'behind' },
+    { kind: 'stamp', stamp: 'boulder', x: 520, y: 99 },
+  ],
+  hazards: [
+    { kind: 'trap', x: 320, y: 93, w: 12, h: 12, cooldownSeconds: 2 },
+  ],
+};

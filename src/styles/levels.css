@@ -1,0 +1,314 @@
+/*
+ * Level select + briefing (e3a2-levels-briefing). DESIGN.md §5.4 "Level select" / "Briefing"
+ * rows, §7.2 (card grid + roving tabindex), §9.3 (sample strings). Reference implementation:
+ * docs/design/mockups/menus.html + mockup.css ("2. LEVEL SELECT" / "3. BRIEFING"). Only
+ * `var(--token)` values (tokens.css) — `.screen`/`.screen__title`/`.menu`/`.button*` are the
+ * shared base (layout.css/base.css); this file only adds what's specific to these two screens.
+ */
+
+/* ── Shared page width (mockup.css `.page`: max-width 1200, centred) ─────────────────────── */
+.screen--levels,
+.screen--briefing {
+  width: 100%;
+  max-width: 75rem; /* 1200px */
+  padding: var(--space-4);
+  text-align: left;
+  align-items: stretch;
+}
+
+.levels__back {
+  align-self: flex-start;
+  margin-bottom: var(--space-4);
+}
+
+/* ── Level select: tiers ───────────────────────────────────────────────────────────────── */
+.tier {
+  width: 100%;
+  margin-top: var(--space-8);
+}
+
+.tier:first-of-type {
+  margin-top: 0;
+}
+
+.tier__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.tier__head h2 {
+  font-size: var(--text-xl);
+  margin: 0;
+}
+
+.tier__head p {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Difficulty pips: a shape (not colour alone), aria-hidden via role="img" + aria-label. */
+.tier__pips {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.tier__pips i {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-accent);
+}
+
+.tier__pips i.is-on {
+  background: var(--color-accent);
+}
+
+/* ── Level select: card grid (4 per row at 1200px, DESIGN §5.4) ──────────────────────────── */
+.levels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+}
+
+.level-card {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 176px;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: var(--space-2);
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-raised);
+  cursor: pointer;
+}
+
+.level-card:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+
+.level-card:active {
+  transform: translateY(2px);
+  box-shadow: var(--shadow-pressed);
+}
+
+:root[data-motion='reduce'] .level-card:active {
+  transform: none;
+}
+
+/* VIS-6: a taller box (72px, was a 25px strip — VIS-5) using the card's spare middle band. THIS
+ * rule owns the canvas's actual on-screen box (`width: 100%` of the card's content area, fixed
+ * 72px tall) — JS (`ui/screens/level-select.ts` + `drawCardThumbnail`, ui/thumbnail.ts) only sizes
+ * the canvas's backing store for devicePixelRatio and contain-fits the WHOLE level into it,
+ * centred, over the theme background; it never sets the canvas's own CSS size (that would feed
+ * back into the card's shrink-to-fit width — see `drawCardThumbnail`'s own comment). */
+.level-card__thumb {
+  display: block;
+  width: 100%;
+  height: 72px;
+  image-rendering: pixelated;
+  border-radius: var(--radius-sm);
+}
+
+.level-card__title {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-weight: 700;
+  font-size: var(--text-lg);
+  line-height: 1.2;
+}
+
+.level-card__num {
+  flex: none;
+  min-width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font: 700 var(--text-sm) / 1 var(--font-mono);
+}
+
+.level-card__state {
+  align-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.level-card__badge {
+  font: 700 var(--text-xs) / 1 var(--font-ui);
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.03em;
+}
+
+.level-card__badge--done,
+.level-card__badge--new,
+.level-card__badge--perfect {
+  color: var(--color-accent-contrast);
+}
+
+.level-card__badge--done {
+  background: var(--color-success);
+}
+
+.level-card__badge--new {
+  background: var(--color-secondary);
+}
+
+.level-card__badge--perfect {
+  background: var(--color-accent);
+}
+
+.level-card__intime {
+  color: var(--color-text-faint);
+  font-size: var(--text-md);
+}
+
+/* Current/last played: a stripe, never colour alone — the accessible description carries it too. */
+.level-card.is-current {
+  box-shadow:
+    inset 6px 0 0 var(--color-accent),
+    var(--shadow-raised);
+}
+
+/* Locked: still focusable (DESIGN §5.4) — dashed border + a dimmer thumbnail; TEXT stays at
+ * --color-text-muted (≥ 4.5:1, tokens.css), never dimmed, so the reason stays readable. */
+.level-card[aria-disabled='true'] {
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.level-card[aria-disabled='true'] .level-card__thumb {
+  opacity: 0.6;
+}
+
+.level-card[aria-disabled='true'] .level-card__title {
+  color: var(--color-text-muted);
+}
+
+/* ── Briefing ──────────────────────────────────────────────────────────────────────────── */
+.screen--briefing {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: stretch;
+}
+
+.screen--briefing .screen__title {
+  font-size: var(--text-2xl);
+  margin: 0;
+}
+
+.briefing__eyebrow {
+  color: var(--color-text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.briefing__thumb {
+  justify-self: center;
+  max-width: 100%;
+  image-rendering: pixelated;
+  border-radius: var(--radius-lg);
+  outline: 2px solid var(--color-border);
+}
+
+.briefing-stats {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.briefing-stats > div {
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.briefing-stats dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.briefing-stats dd {
+  margin: 0;
+  font: 700 var(--text-xl) / 1.2 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.briefing-stats dd small {
+  font: 500 var(--text-sm) / 1 var(--font-ui);
+  color: var(--color-text-muted);
+}
+
+.briefing__best {
+  margin: 0;
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.skill-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.skill-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  background: var(--color-surface-raised);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+}
+
+.skill-chip__icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.skill-chip b {
+  font-family: var(--font-mono);
+}
+
+.briefing__hint {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.briefing__hint-text {
+  flex: 1 1 20rem;
+  margin: 0;
+  color: var(--color-text-muted);
+  align-self: center;
+}

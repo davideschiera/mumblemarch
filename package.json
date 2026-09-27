@@ -1,0 +1,25 @@
+{
+  "name": "mumblemarch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mumblemarch — guide a marching line of mumbles home. A puzzle game with brand-new levels.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/preview.mjs",
+    "snapshot": "node scripts/snapshot.mjs",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.core.json && tsc -p tests/tsconfig.json",
+    "lint": "node scripts/check-architecture.mjs",
+    "test": "node --test \"tests/**/*.test.ts\"",
+    "check": "npm run typecheck && npm run lint && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2"
+  }
+}

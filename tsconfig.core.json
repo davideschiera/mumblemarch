@@ -1,0 +1,10 @@
+{
+  // Purity guard: the simulation (core/) and level data (levels/) must compile with NO DOM
+  // and NO Node globals, so they run identically in the browser and in `node --test`.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": []
+  },
+  "include": ["src/core", "src/levels", "src/art"]
+}

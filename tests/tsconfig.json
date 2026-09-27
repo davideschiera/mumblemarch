@@ -1,0 +1,11 @@
+{
+  // Tests run in Node (node:test + node:assert types). DOM *types* are included so tests can
+  // import browser-layer modules (audio, render) for their pure helpers; tests must still not
+  // touch real DOM objects at runtime (Node has none).
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["."]
+}

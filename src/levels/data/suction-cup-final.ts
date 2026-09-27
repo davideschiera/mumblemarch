@@ -1,0 +1,30 @@
+import type { LevelDef } from '../format.ts';
+
+export const suctionCupFinalLevel: LevelDef = {
+  id: 'suction-cup-final',
+  title: 'Suction Cup Final',
+  tier: 1,
+  hint: 'The chimney is tall but grippy. Stick with it!',
+  theme: 'foundry',
+  width: 400,
+  height: 160,
+  lemmings: 12,
+  saveRequired: 6,
+  releaseRate: 50,
+  timeLimitSeconds: 300,
+  skills: { climber: 10 },
+  entrances: [{ x: 64, y: 88 }],
+  exits: [{ x: 360, y: 96 }],
+  terrain: [
+    { kind: 'rect', x: 0, y: 120, w: 232, h: 40, fill: 'bricks' },
+    { kind: 'rect', x: 232, y: 64, w: 88, h: 96, fill: 'bricks' },
+    { kind: 'rect', x: 320, y: 96, w: 80, h: 64, fill: 'bricks' },
+    { kind: 'rect', x: 0, y: 8, w: 400, h: 4, fill: 'solid' },
+    { kind: 'rect', x: 96, y: 12, w: 4, h: 20, fill: 'solid' },
+    { kind: 'rect', x: 300, y: 12, w: 4, h: 28, fill: 'solid' },
+    { kind: 'ellipse', cx: 390, cy: 80, rx: 10, ry: 10, fill: 'solid' },
+    { kind: 'ellipse', cx: 390, cy: 80, rx: 4, ry: 4, op: 'erase' },
+    { kind: 'rect', x: 300, y: 40, w: 4, h: 12, fill: 'solid' },
+    { kind: 'rect', x: 292, y: 40, w: 12, h: 4, fill: 'solid' },
+  ],
+};

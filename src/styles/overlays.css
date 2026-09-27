@@ -1,0 +1,184 @@
+/* Plates over the canvas (e2b-hud-view), mounted in `#stage-overlay` (DESIGN §5.1/§5.3/§6.2.2/
+ * §7.7): pause/×3 pills, refusal/info toast, armed bubble, edge arrow, caption strip. All
+ * `aria-hidden` — the Announcer speaks the equivalent text (§7.6). Positioned absolutely
+ * against the overlay, which layout.css sizes exactly to the canvas at every scale. Only
+ * var(--token) colour/spacing values (two literal fade/offset numbers are noted below, tied to
+ * ui-config.ts constants rather than the token scale). */
+
+.overlay-pill-row {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--space-2);
+}
+
+.overlay-pill {
+  font: 600 var(--text-md) / 1 var(--font-ui);
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-text);
+  background: rgb(12 10 26 / 0.9); /* --color-surface-sunken at 90% opacity (§5.3) */
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.overlay-toast {
+  position: absolute;
+  top: 56px; /* under the pill row */
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 2 * var(--space-3));
+  font: 600 var(--text-md) / 1.2 var(--font-ui);
+  padding: var(--space-2) var(--space-4);
+  color: var(--color-text);
+  background: rgb(12 10 26 / 0.92);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overlay-toast[data-kind='refusal'] {
+  border-color: var(--color-danger);
+}
+
+.overlay-toast[data-kind='refusal']::before {
+  content: '✕ ';
+  color: var(--color-danger);
+  font-weight: 800;
+}
+
+.overlay-toast[data-kind='info'] {
+  border-color: var(--color-info);
+}
+
+.overlay-toast[data-kind='info']::before {
+  content: 'ℹ ';
+  color: var(--color-info);
+}
+
+/* Armed Pop all / Restart bubble ("Press again…", §6.4.5/§6.4.6). DESIGN §5.3 shows it above
+ * the Pop all button, but the toolbar sits well below the canvas here — every plate is kept
+ * over the canvas instead (this task's build note), stacked under the toast. */
+.overlay-bubble {
+  position: absolute;
+  top: 108px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(17rem, calc(100% - 2 * var(--space-3)));
+  font: 500 var(--text-sm) / 1.35 var(--font-ui);
+  text-align: center;
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 2px solid var(--color-danger);
+  border-radius: var(--radius-md);
+}
+
+/* Edge arrow (§6.2.2): the selected mumble is off-screen with Follow off; sits at that edge,
+ * vertically centred. */
+.overlay-edge {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font: 700 var(--text-md) / 1 var(--font-ui);
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-text);
+  background: rgb(12 10 26 / 0.85);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.overlay-edge[data-side='left'] {
+  left: var(--space-2);
+}
+
+.overlay-edge[data-side='right'] {
+  right: var(--space-2);
+}
+
+/* Caption strip (§7.7): bottom-left, inset 8 px, ≤ 2 lines, newest at the bottom; moves to the
+ * top-left while the cursor or the selected mumble is inside its box (`caption-strip--top`,
+ * toggled by `ui/hud/captions.ts`). `top: 100%` anchors it against the stage overlay's own
+ * height (its containing block) with no JS measurement; `transform`'s own percentage (the
+ * strip's OWN box, always resolvable without knowing the overlay's height) then shifts it up by
+ * its height plus the inset — so both corners work at any content height (1 or 2 lines), and
+ * `top`/`transform` are two plain values a CSS transition can interpolate (never `auto`, which
+ * can't animate). `--instant` (reduced motion, JS-toggled from the same flag as the line fade
+ * below) drops the transition. */
+.caption-strip {
+  position: absolute;
+  left: var(--space-2);
+  top: 100%;
+  transform: translateY(calc(-100% - var(--space-2)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: calc(100% - 2 * var(--space-2));
+  transition: top 150ms var(--easing), transform 150ms var(--easing);
+}
+
+.caption-strip--top {
+  top: 0%;
+  transform: translateY(var(--space-2));
+}
+
+.caption-strip--instant {
+  transition: none;
+}
+
+.caption-strip__line {
+  align-self: flex-start;
+  font: 600 var(--text-md) / 1.2 var(--font-ui);
+  padding: var(--space-1) var(--space-3);
+  color: var(--color-text);
+  background: rgb(12 10 26 / 0.9);
+  border-radius: var(--radius-sm);
+  opacity: 1;
+  /* 150 ms fade (DESIGN §7.7 = ui-config.ts CAPTION_FADE_MS); the view skips the --out class
+     entirely under reduced motion, so this never actually runs there. */
+  transition: opacity 150ms var(--easing);
+}
+
+.caption-strip__line::before {
+  content: '«\00a0';
+  color: var(--color-accent);
+}
+
+.caption-strip__line::after {
+  content: '\00a0»';
+  color: var(--color-accent);
+}
+
+.caption-strip__line--out {
+  opacity: 0;
+}
+
+/* §6.1.3 edge scrolling: an arrow chevron at the active edge zone (set by the controller as
+ * `data-edge` on the overlay). Generated content uses the empty alt text so AT ignores it. */
+.stage__overlay[data-edge='left']::before,
+.stage__overlay[data-edge='right']::after {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font-size: var(--text-xl);
+  line-height: 1;
+  opacity: 0.9;
+}
+
+.stage__overlay[data-edge='left']::before {
+  content: '◂' / '';
+  left: var(--space-2);
+}
+
+.stage__overlay[data-edge='right']::after {
+  content: '▸' / '';
+  right: var(--space-2);
+}

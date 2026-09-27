@@ -1,0 +1,92 @@
+/*
+ * Design tokens — the ONLY place colours, spacing, type and motion values are defined.
+ * Components reference var(--…) only.
+ *
+ * Values are DESIGN.md §5.2, verified against docs/design/mockups/mockup.css (the reference
+ * implementation dev copies from — if the two ever disagree, mockup.css wins). All contrast
+ * ratios below are cited from §5.2 / App. D and were independently re-verified during design.
+ * Token NAMES are kept stable across this file's history so `hud.css`/`layout.css` (owned by
+ * other workers) never need to change just because a value changed.
+ */
+:root {
+  color-scheme: dark;
+
+  /* Colour */
+  --color-bg: #14112a; /* page */
+  --color-surface: #1f1b3d; /* panels, cards, dialogs */
+  --color-surface-raised: #2c2754; /* buttons */
+  --color-surface-hover: #3a3470; /* button hover — text 10.1:1 */
+  --color-surface-sunken: #0c0a1a; /* status line, minimap well, RR value */
+  --color-border: #7a72b8; /* control boundaries — 4.3:1 on bg, 3.8:1 surface, 3.2:1 raised */
+  --color-border-strong: #a59de0; /* hover border — 5.6:1 on raised */
+  --color-text: #f7f3ff; /* body text — 16.8 bg · 15.0 surface · 12.6 raised · 17.9 sunken */
+  --color-text-muted: #c9c2e8; /* secondary text — 10.8 bg · 9.6 surface · 8.1 raised */
+  --color-text-faint: #b0a9d4; /* key hints, "0 left" — 5.0 hover · 6.2 raised · 7.4 surface · 8.8 sunken */
+  --color-accent: #ffc93c; /* tuft yellow: selected skill, primary button, minimap dots */
+  --color-accent-contrast: #2a1433; /* plum — text on accent (11.0:1); also the mumble/UI outline */
+  --color-secondary: #ff8a65; /* body coral: decorative highlights, "New" badge */
+  --color-success: #72e08e; /* saved ✓, completed — 10.0 surface · 11.9 sunken */
+  --color-warning: #ffb44d; /* time low, ≤ 3 bricks — 9.3 surface · 11.1 sunken */
+  --color-danger: #ff7470; /* Pop all, failure — 6.2 surface · 5.2 raised */
+  --color-info: #8fb6ff; /* hints, links — 8.0 surface */
+  --color-focus: #6fe3ff; /* focus ring ONLY — distinct from the yellow "selected" state */
+
+  /* Typography (no web-font fetches) */
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* "Sticker" display lettering (title, logo, big numbers) built from --font-ui, not a new face. */
+  --font-display: var(--font-ui);
+  --font-display-weight: 900;
+  --letter-spacing-display: 0.02em;
+  --text-stroke-display: 0.18em var(--color-accent-contrast);
+  --text-shadow-display: 0 0.09em 0 var(--color-accent-contrast);
+
+  /* Scale: no running text below --text-sm. */
+  --text-xs: 0.75rem; /* 12px — badges only */
+  --text-sm: 0.875rem; /* 14px */
+  --text-md: 1rem; /* 16px */
+  --text-lg: 1.25rem; /* 20px */
+  --text-xl: 1.5rem; /* 24px */
+  --text-2xl: 2rem; /* 32px */
+  --text-hero: clamp(3rem, 7vw, 5.5rem);
+
+  /* Spacing (4px grid) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+
+  /* Shape & depth ("chunky toy" buttons) */
+  --radius-sm: 6px; /* badges, chips */
+  --radius-md: 10px; /* buttons */
+  --radius-lg: 16px; /* cards, dialogs */
+  --radius-pill: 999px;
+  --shadow-raised: 0 3px 0 var(--color-surface-sunken);
+  --shadow-pressed: 0 1px 0 var(--color-surface-sunken);
+  --focus-ring: 3px solid var(--color-focus);
+  --focus-offset: 2px;
+
+  /* Sizes (WCAG 2.5.5/2.5.8 targets) */
+  --hud-button-h: 88px;
+  --skill-w: 80px;
+  --control-w: 72px;
+  --min-target: 44px;
+
+  /* Motion (zeroed when reduced motion is active — see below) */
+  --duration-fast: 120ms;
+  --duration-normal: 220ms;
+  --easing: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Layers */
+  --z-hud: 10;
+  --z-dialog: 100;
+}
+
+/* `data-motion` is set by the app from settings + prefers-reduced-motion (DESIGN §7.4). */
+:root[data-motion='reduce'] {
+  --duration-fast: 0ms;
+  --duration-normal: 0ms;
+}

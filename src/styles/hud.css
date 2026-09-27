@@ -1,0 +1,343 @@
+/*
+ * In-game toolbar (DESIGN §5.1/§5.2/§5.3/§6.2.6/§7.2/§7.4/§7.8), owner e2a-toolbar.
+ * Status line / minimap / overlay plates live in status.css / overlays.css (e2b-hud-view);
+ * `.game-hud` / `.game-toolbar` (shared row geometry) live in layout.css. Only var(--token)
+ * values below (tokens.css); state is read from ARIA attributes, never colour alone (§7.5).
+ */
+
+/* ── Toolbar shell: one flex row that wraps into 2 at ×2 (§5.1). `container-type` lets the
+   @container rule below regroup its own children by the toolbar's OWN rendered width (which
+   `.game-toolbar.stage-width`, layout.css, keeps equal to the canvas' CSS width). ──────────── */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  container-type: inline-size;
+}
+
+.toolbar__sep {
+  align-self: stretch;
+  width: 2px;
+  margin-block: var(--space-2);
+  background: var(--color-surface-raised);
+  border-radius: 1px;
+}
+
+/* Each group is its own flex item (never splits internally), so wrapping regroups whole groups. */
+.rr-group,
+.toolbar__skills,
+.toolbar__controls {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.rr-group {
+  order: 1;
+}
+.toolbar__sep--1 {
+  order: 2;
+}
+.toolbar__skills {
+  order: 3;
+}
+.toolbar__sep--2 {
+  order: 4;
+}
+.toolbar__controls {
+  order: 5;
+}
+.toolbar__sep--3 {
+  order: 6;
+}
+.hud-button--menu {
+  order: 7;
+}
+
+/* At ×2 the toolbar's own box is ~800 CSS px: too narrow for one row (§5.1 budget ≈1170 px), so
+   it wraps to 2 — reordered (not just reflowed) so the 8 skills fill row 1 alone and RR + the
+   controls + ☰ share row 2, instead of splitting mid-group. */
+@container (max-width: 999px) {
+  .toolbar__skills {
+    order: 1;
+  }
+  .toolbar__sep--1 {
+    display: none;
+  }
+  .rr-group {
+    order: 2;
+  }
+  .toolbar__sep--2 {
+    order: 3;
+  }
+  .toolbar__controls {
+    order: 4;
+  }
+  .toolbar__sep--3 {
+    order: 5;
+  }
+  .hud-button--menu {
+    order: 6;
+  }
+}
+
+/* ── Buttons: "chunky toy" depth (§5.2) — 3 px shadow, translateY(2px) + 1 px shadow when
+   pressed, none under reduced motion (colour change only). Selected = 3 px yellow border + tint
+   + notch + bold (never colour alone); 0-left = diagonal hatch + faint count, still focusable. */
+.skill,
+.hud-button {
+  position: relative;
+  height: var(--hud-button-h);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  font: 600 var(--text-sm) / 1.1 var(--font-ui);
+  color: var(--color-text);
+  background: var(--color-surface-raised);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+  cursor: pointer;
+}
+.skill {
+  width: var(--skill-w);
+  padding-top: 14px;
+}
+.hud-button {
+  width: var(--control-w);
+}
+.hud-button--rr {
+  width: 48px;
+}
+.hud-button--menu {
+  width: 48px;
+  font-size: var(--text-xl);
+}
+.hud-button--pop {
+  width: 92px;
+  border-color: var(--color-danger);
+}
+.skill:hover,
+.hud-button:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+.skill:active,
+.hud-button:active {
+  transform: translateY(2px);
+  box-shadow: var(--shadow-pressed);
+}
+:root[data-motion='reduce'] .skill:active,
+:root[data-motion='reduce'] .hud-button:active {
+  transform: none;
+}
+
+.hud-icon {
+  image-rendering: pixelated;
+  display: block;
+}
+.skill .hud-icon {
+  width: 48px;
+  height: 48px;
+}
+.hud-button .hud-icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* VIS-1: `.skill-badges` is a DOM *sibling* of the `<button class="skill">`, not a descendant
+   (see skill-button.ts) — `.skill-wrap` hugs the button's own outer (border) box exactly (its
+   only in-flow child), and `.skill-badges` then fills that same box (`inset: 0`), so the two
+   offsets below are the old top:4px/left:7px and top:3px/right:4px (relative to the button's
+   *padding* box) plus its 2px border-width, to land in the same spot relative to the button's
+   *border* box instead — and nudge 1px further while the button's border grows to 3px
+   (`aria-pressed`, hud.css above) so the badges don't visibly drift. */
+.skill-wrap {
+  position: relative;
+  display: inline-block;
+}
+.skill-badges {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.skill__key {
+  position: absolute;
+  top: 6px;
+  left: 9px;
+  font: 600 var(--text-xs) / 1 var(--font-mono);
+  color: var(--color-text-faint);
+}
+.skill__count {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  min-width: 2.2ch;
+  padding: 1px 4px;
+  border-radius: var(--radius-sm);
+  font: 700 var(--text-lg) / 1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  background: var(--color-surface-sunken);
+}
+.skill[aria-pressed='true'] ~ .skill-badges .skill__key {
+  top: 7px;
+  left: 10px;
+}
+.skill[aria-pressed='true'] ~ .skill-badges .skill__count {
+  top: 6px;
+  right: 7px;
+}
+.skill__name {
+  font-size: var(--text-sm);
+}
+
+/* Selected (aria-pressed): 3 px yellow border + 14% tint + ▲ notch + bold — independent of, and
+   combinable with, the cyan focus ring (base.css `:focus-visible`, §5.2). */
+.skill[aria-pressed='true'],
+.hud-button[aria-pressed='true'] {
+  border: 3px solid var(--color-accent);
+  background:
+    linear-gradient(rgb(255 201 60 / 0.14), rgb(255 201 60 / 0.14)),
+    var(--color-surface-raised);
+  font-weight: 800;
+}
+.skill[aria-pressed='true']::before,
+.hud-button[aria-pressed='true']::before {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: var(--color-accent);
+}
+
+/* 0 left: diagonal hatch + faint icon/count; still focusable (aria-disabled, not disabled). */
+.skill[aria-disabled='true'] {
+  background-image: repeating-linear-gradient(45deg, #ffffff14 0 4px, transparent 4px 8px);
+}
+.skill[aria-disabled='true'] .hud-icon {
+  opacity: 0.45;
+}
+.skill[aria-disabled='true'] ~ .skill-badges .skill__count {
+  color: var(--color-text-faint);
+}
+
+/* Refusal flash (§5.3/§7.4): 3 shakes ±3 px over 240 ms; reduced motion → 2 blinks of a red ✕
+   badge over 400 ms instead (the toolbar picks the class; both are guarded here too). */
+@keyframes skill-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-3px);
+  }
+  40%,
+  80% {
+    transform: translateX(3px);
+  }
+}
+:root:not([data-motion='reduce']) .skill--refused-shake {
+  animation: skill-shake 240ms var(--easing);
+}
+@keyframes skill-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.skill--refused-blink::after {
+  content: '✕';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font: 800 12px / 1 var(--font-ui);
+  background: var(--color-danger);
+  color: var(--color-accent-contrast);
+  animation: skill-blink 200ms steps(1, jump-end) 2;
+}
+
+/* Count-badge pop (§5.3/§7.4): 1.0 → 1.25 → 1.0 over 160 ms; none under reduced motion. */
+@keyframes count-pop {
+  50% {
+    transform: scale(1.25);
+  }
+}
+:root:not([data-motion='reduce']) .skill__count--pop {
+  animation: count-pop 160ms var(--easing);
+}
+
+/* ── Release-rate group (§5.3/§7.2): value well 56×88 sunken; − shows a padlock + "min" at the
+   level minimum instead of its icon. ──────────────────────────────────────────────────────── */
+.rr-value {
+  width: 56px;
+  height: var(--hud-button-h);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  background: var(--color-surface-sunken);
+  border: 2px solid var(--color-surface-raised);
+  border-radius: var(--radius-md);
+  font: 700 var(--text-xl) / 1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.rr-value__sub {
+  font: 500 var(--text-xs) / 1.3 var(--font-ui);
+  color: var(--color-text-muted);
+}
+.rr-lock {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font: 700 var(--text-xs) / 1 var(--font-ui);
+  color: var(--color-text-faint);
+}
+.hud-button--rr[aria-disabled='true'] .hud-icon {
+  display: none;
+}
+.hud-button--rr[aria-disabled='true'] .rr-lock {
+  display: flex;
+}
+
+/* ── Pop all (§5.3/§7.2/§7.4/§7.8): danger border; armed = solid fill + dashed inner outline +
+   1 Hz border pulse (never faster, off under reduced motion); popping = disabled. ──────────── */
+.hud-button--pop[data-state='armed'] {
+  background: var(--color-danger);
+  color: var(--color-accent-contrast);
+  font-weight: 800;
+  outline: 2px dashed var(--color-accent-contrast);
+  outline-offset: -7px;
+}
+.hud-button--pop[data-state='armed'] span {
+  font-size: var(--text-sm);
+}
+@keyframes pop-pulse {
+  50% {
+    border-color: var(--color-accent-contrast);
+  }
+}
+:root:not([data-motion='reduce']) .hud-button--pop[data-state='armed'] {
+  animation: pop-pulse 1s steps(1, jump-end) infinite;
+}
+.hud-button--pop[aria-disabled='true'] {
+  opacity: 0.75;
+}
+
+.hud-button span {
+  max-width: calc(100% - 8px);
+  text-align: center;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}

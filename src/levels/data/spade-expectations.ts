@@ -1,0 +1,32 @@
+import type { LevelDef } from '../format.ts';
+
+export const spadeExpectationsLevel: LevelDef = {
+  id: 'spade-expectations',
+  title: 'Spade Expectations',
+  tier: 1,
+  hint: 'The burrow is right under your feet. Click a mumble, or use 1–8, X, Space — one spade is all it takes.',
+  theme: 'mossgrove',
+  width: 400,
+  height: 160,
+  lemmings: 10,
+  saveRequired: 5,
+  releaseRate: 50,
+  timeLimitSeconds: 300,
+  skills: { digger: 5 },
+  entrances: [{ x: 64, y: 40 }],
+  exits: [{ x: 312, y: 120 }],
+  terrain: [
+    { kind: 'rect', x: 0, y: 120, w: 400, h: 40, fill: 'strata' },
+    { kind: 'polygon', points: [[0, 40], [24, 40], [30, 52], [32, 76], [32, 160], [0, 160]] },
+    { kind: 'polygon', points: [[400, 44], [376, 44], [370, 56], [368, 76], [368, 160], [400, 160]] },
+    { kind: 'rect', x: 24, y: 76, w: 352, h: 16 },
+    { kind: 'rect', x: 52, y: 76, w: 24, h: 8, material: 'steel' },
+    { kind: 'polygon', points: [[96, 92], [104, 92], [100, 99]] },
+    { kind: 'polygon', points: [[180, 92], [186, 92], [183, 97]] },
+    { kind: 'polygon', points: [[262, 92], [270, 92], [266, 100]] },
+    { kind: 'stamp', stamp: 'boulder', x: 34, y: 116 },
+    { kind: 'stamp', stamp: 'boulder', x: 352, y: 115, flipX: true },
+    { kind: 'stamp', stamp: 'mushroom', x: 380, y: 37, op: 'behind' },
+    { kind: 'stamp', stamp: 'mushroom', x: 4, y: 33, op: 'behind' },
+  ],
+};

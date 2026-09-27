@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="Guide a marching line of mumbles home — a puzzle game with brand-new levels." />
+    <title>Mumblemarch</title>
+    <!-- Mumble head (tuft + coral face), exact hex from src/art/palette.ts (MUMBLE_PALETTE keys
+         t/o/b/c/w) so the favicon matches the in-game sprite colours. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%208%2010'%20shape-rendering='crispEdges'%3E%3Cpath%20fill='%23ffc93c'%20d='M3%200h2v1H3zM2%201h1v1H2zM5%201h1v1H5z'/%3E%3Cpath%20fill='%232a1433'%20d='M2%202h4v1H2zM1%203h1v6H1zM6%203h1v6H6zM2%209h4v1H2z'/%3E%3Cpath%20fill='%23ff8a65'%20d='M2%203h4v6H2z'/%3E%3Cpath%20fill='%23fff1d6'%20d='M3%205h2v3H3z'/%3E%3Cpath%20fill='%23fff'%20d='M4%203h1v1H4z'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="./main.css" />
+    <script type="module" src="./main.js"></script>
+  </head>
+  <body>
+    <main id="app" class="app">
+      <!-- Persistent play area; shown only on screens that use it (the router toggles `hidden`). -->
+      <div id="stage" class="stage" hidden>
+        <!-- The box sizes to the canvas; the overlay sits exactly over it (pause/×3 pills, toast,
+             caption strip, armed bubble, edge arrow — mounted by the game view, DESIGN §5.3). -->
+        <div class="stage__box">
+          <canvas
+            id="game-canvas"
+            class="stage__canvas"
+            tabindex="0"
+            role="application"
+            aria-roledescription="playfield"
+            aria-label="Playfield"
+            aria-describedby="stage-help"
+          ></canvas>
+          <div id="stage-overlay" class="stage__overlay"></div>
+        </div>
+        <!-- Exact text set from ui/strings.ts STAGE_HELP_TEXT by app.ts at startup (DESIGN §7.2);
+             this is only the pre-JS fallback so it is never read empty. -->
+        <p id="stage-help" class="visually-hidden">
+          Choose a skill with 1 to 8. Pick a mumble with X and Z, or move the cursor with W A S D.
+          Press Space to assign. P pauses, H opens help.
+        </p>
+      </div>
+      <!-- Screens (title, level select, HUD, results…) are mounted here by the router. -->
+      <div id="screen-root" class="screen-root">
+        <p class="boot">Loading…</p>
+        <noscript><p class="boot">This game needs JavaScript enabled.</p></noscript>
+      </div>
+    </main>
+    <!-- Screen-reader announcements (written only by src/ui/announcer.ts). -->
+    <div id="announcer-polite" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+    <div id="announcer-assertive" class="visually-hidden" aria-live="assertive" aria-atomic="true"></div>
+  </body>
+</html>

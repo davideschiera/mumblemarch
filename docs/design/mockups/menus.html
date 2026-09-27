@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Mumblemarch — menus mockup</title>
+<link rel="stylesheet" href="mockup.css" />
+<style>
+  body { padding: 24px 0 64px; }
+  .frame { width: 1280px; min-height: 720px; margin: 0 auto 40px; position: relative; border: 1px dashed #3a3470; border-radius: 8px; overflow: hidden; }
+  .frame > .tag { position: absolute; top: 8px; right: 12px; font: 600 12px/1 var(--font-mono); color: var(--color-text-faint); }
+  .title-screen { display: grid; justify-items: center; align-content: start; gap: 20px; padding-top: 72px; }
+  .tagline { color: var(--color-text-muted); font-size: var(--text-xl); font-weight: 600; }
+  .menu-col { display: grid; gap: 12px; margin-top: 12px; }
+  .strip { position: absolute; left: 0; right: 0; bottom: 36px; display: flex; justify-content: center; }
+  .strip canvas { width: 1200px; height: 96px; image-rendering: pixelated; }
+  .foot { position: absolute; bottom: 10px; width: 100%; text-align: center; color: var(--color-text-faint); font-size: var(--text-sm); }
+  .briefing { display: grid; gap: 20px; }
+  .briefing canvas.thumb { width: 100%; image-rendering: pixelated; border-radius: 8px; outline: 2px solid #2c2754; }
+  .hint { display: flex; gap: 12px; align-items: center; }
+  .overlay { position: absolute; inset: 0; background: rgb(0 0 0 / 0.6); display: grid; place-items: center; }
+  .frozen { position: absolute; inset: 0; display: grid; place-items: start center; padding-top: 16px; opacity: 0.9; }
+  .frozen img { width: 1200px; }
+  .results { display: grid; justify-items: center; gap: 18px; padding-top: 64px; text-align: center; }
+  .results .big-meter { width: 560px; }
+</style>
+<script src="sprites.js"></script>
+<script src="levels-data.js"></script>
+</head>
+<body>
+
+<!-- 1. TITLE -->
+<section class="frame" aria-label="Title screen">
+  <span class="tag">TITLE · 1280×720</span>
+  <div class="title-screen">
+    <h1 class="display logo" aria-label="Mumblemarch" id="logo"></h1>
+    <p class="tagline">Little feet, big plans.</p>
+    <nav class="menu-col" aria-label="Main menu">
+      <button class="button button--primary button--wide is-focus" type="button" id="continue">Continue — 4</button>
+      <button class="button button--wide" type="button">Levels</button>
+      <button class="button button--wide" type="button">How to play</button>
+      <button class="button button--wide" type="button">Settings</button>
+    </nav>
+  </div>
+  <div class="strip"><canvas id="strip" width="400" height="32"></canvas></div>
+  <p class="foot">Sound starts after your first click or key press · <span class="kbd">M</span> mutes</p>
+</section>
+
+<!-- 2. LEVEL SELECT -->
+<section class="frame" aria-label="Level select screen">
+  <span class="tag">LEVEL SELECT</span>
+  <div class="page" style="padding-top:28px">
+    <div class="row" style="justify-content:space-between">
+      <h1 class="display" style="font-size:var(--text-2xl)">Levels</h1>
+      <button class="button" type="button">← Back</button>
+    </div>
+    <div id="tiers"></div>
+  </div>
+</section>
+
+<!-- 3. BRIEFING -->
+<section class="frame" aria-label="Briefing screen">
+  <span class="tag">BRIEFING</span>
+  <div class="page briefing" style="padding-top:32px" id="briefing"></div>
+</section>
+
+<!-- 4. PAUSE MENU -->
+<section class="frame" aria-label="Pause menu">
+  <span class="tag">PAUSE MENU (dialog over the frozen game)</span>
+  <div class="frozen"><img src="game-screen.png" alt="" onerror="this.remove()" /></div>
+  <div class="overlay">
+    <div class="dialog stack" role="dialog" aria-modal="true" aria-labelledby="pz">
+      <h2 id="pz" class="display" style="font-size:var(--text-2xl)">Paused</h2>
+      <p class="eyebrow">Saved 3 · need 8 of 20 · 4:12 left</p>
+      <button class="button button--primary is-focus" type="button">Resume <span class="kbd" style="margin-left:6px">Esc</span></button>
+      <button class="button" type="button">Restart level</button>
+      <button class="button" type="button">Show briefing</button>
+      <button class="button" type="button">How to play</button>
+      <button class="button" type="button">Settings</button>
+      <button class="button" type="button">Quit to levels</button>
+      <p class="eyebrow" style="font-size:var(--text-sm)"><span class="kbd">1</span>–<span class="kbd">8</span> skill · <span class="kbd">Z</span>/<span class="kbd">X</span> pick mumble · <span class="kbd">Space</span> assign · <span class="kbd">P</span> pause · <span class="kbd">F</span> fast</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. RESULTS (success) -->
+<section class="frame" aria-label="Results screen">
+  <span class="tag">RESULTS · success</span>
+  <div class="results">
+    <p class="eyebrow" id="res-eyebrow">Level 4 · Breezy</p>
+    <h1 class="display" style="font-size:var(--text-hero)">✓ Level complete!</h1>
+    <p class="results-num">You saved <strong>14</strong> of 20</p>
+    <div class="big-meter" role="img" aria-label="14 of 20 saved; 10 needed"><i style="width:70%"></i><b style="left:50%"></b></div>
+    <p class="eyebrow">needed 10 · <span class="badge badge--perfect">NEW BEST</span></p>
+    <p style="font-size:var(--text-xl); max-width:40ch">Nicely done. That went smoothly.</p>
+    <p class="eyebrow">Beat the clock ✓</p>
+    <div class="row" style="justify-content:center; margin-top:8px">
+      <button class="button button--primary button--wide is-focus" type="button">Next level →</button>
+      <button class="button" type="button">Try again</button>
+      <button class="button" type="button">Levels</button>
+    </div>
+    <canvas id="hop" width="120" height="16" style="width:480px;height:64px;image-rendering:pixelated;margin-top:12px"></canvas>
+  </div>
+</section>
+
+<script>
+(() => {
+  const ART = window.MUMBLE_ART || null;
+  const LEVELS = window.MUMBLE_LEVELS || null;
+  const TIERS = { 1: ['Breezy', 'Gentle first steps'], 2: ['Knotty', 'A few tangles'], 3: ['Gnarly', 'Think it through'], 4: ['Stampede', 'Everything at once'] };
+  const el = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
+  const pal = () => (ART && ART.palette) || {};
+  function drawRows(ctx, rows, x, y, p, flip) {
+    const w = Math.max(...rows.map((r) => r.length));
+    rows.forEach((row, j) => [...row].forEach((ch, i) => { const c = p[ch]; if (!c || ch === '.' || ch === ' ') return; ctx.fillStyle = c; ctx.fillRect(x + (flip ? w - 1 - i : i), y + j, 1, 1); }));
+  }
+  function mumble(ctx, state, f, x, y, dir = 1) {
+    const s = ART && ART.sprites && (ART.sprites[state] || ART.sprites.walking);
+    if (!s) { ctx.fillStyle = '#2a1433'; ctx.fillRect(x - 3, y - 9, 7, 9); ctx.fillStyle = '#ff8a65'; ctx.fillRect(x - 2, y - 8, 5, 7); ctx.fillStyle = '#ffc93c'; ctx.fillRect(x - 1, y - 10, 2, 2); return; }
+    const rows = s.frames[f % s.frames.length]; const w = Math.max(...rows.map((r) => r.length));
+    const fx = s.footX ?? (w >> 1), fy = s.footY ?? rows.length;
+    drawRows(ctx, rows, dir === 1 ? x - fx : x - (w - 1 - fx), y - fy, pal(), dir === -1);
+  }
+  function icon(name) {
+    const c = document.createElement('canvas'); c.width = 16; c.height = 16;
+    const icons = ART && ART.icons; const ic = icons && (icons[name] || (icons.skills && icons.skills[name]));
+    const rows = ic && (Array.isArray(ic) ? ic : ic.rows || ic.pixels);
+    if (rows) { drawRows(c.getContext('2d'), rows, 0, 0, Object.assign({}, pal(), (icons && icons.palette) || {}, (ic && ic.palette) || {}), false); }
+    else { const x = c.getContext('2d'); x.fillStyle = '#ffc93c'; x.font = 'bold 13px system-ui'; x.textAlign = 'center'; x.fillText(name[0].toUpperCase(), 8, 13); }
+    return c;
+  }
+  function theme(id) { return ART && ART.themes && ART.themes[id]; }
+  // Render a LevelDef with the compiler's paint semantics + the visual spec §4.2 texture recipes.
+  const mod = (a, n) => ((a % n) + n) % n;
+  function h2(x, y, s) { let t = (s ^ Math.imul(x, 374761393) ^ Math.imul(y, 668265263)) >>> 0; t = (t + 0x6d2b79f5) >>> 0; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+  function vnoise(x, y, cx, cy, s) { const gx = x / cx, gy = y / cy, ix = Math.floor(gx), iy = Math.floor(gy), fx = gx - ix, fy = gy - iy; const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+    const a = h2(ix, iy, s), b = h2(ix + 1, iy, s), c = h2(ix, iy + 1, s), d = h2(ix + 1, iy + 1, s); return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v; }
+  const PLATE = ['LLLLLLLD', 'LrMMMMrD', 'LdMMMMdD', 'LMMMMMMD', 'LMMMMMMD', 'LrMMMMrD', 'LdMMMMdD', 'DDDDDDDD'];
+  const CHEV = ['........', 'AAE.....', '.AAE....', '..AAE...', '.AAE....', 'AAE.....', '........', '........'];
+  const STAMPS = window.MUMBLE_STAMPS || {};
+  function hashId(str) { let h = 2166136261; for (const ch of str) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function coverage(p, W, H) {
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d'); x.fillStyle = '#fff';
+    if (p.kind === 'rect') x.fillRect(p.x, p.y, p.w, p.h);
+    else if (p.kind === 'ellipse') { x.beginPath(); x.ellipse(p.cx, p.cy, p.rx, p.ry, 0, 0, Math.PI * 2); x.fill(); }
+    else if (p.kind === 'polygon') { x.beginPath(); p.points.forEach(([px, py], i) => (i ? x.lineTo(px, py) : x.moveTo(px, py))); x.closePath(); x.fill('evenodd'); }
+    else if (p.kind === 'stamp') { const rows = STAMPS[p.stamp] || []; const k = p.scale || 1; const w = Math.max(0, ...rows.map((r) => r.length));
+      rows.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== '#') return; const ii = p.flipX ? w - 1 - i : i; x.fillRect(p.x + ii * k, p.y + j * k, k, k); })); }
+    const d = x.getImageData(0, 0, W, H).data; const out = new Uint8Array(W * H); for (let i = 0; i < W * H; i++) out[i] = d[i * 4 + 3] > 127 ? 1 : 0; return out;
+  }
+  function renderLevel(level, opts = {}) {
+    const W = level.width, H = level.height, th = theme(level.theme), seed = level.seed ?? hashId(level.id);
+    const MAT = { earth: 1, steel: 2, 'one-way-right': 3, 'one-way-left': 4 };
+    const mat = new Uint8Array(W * H), fill = new Array(W * H).fill(null);
+    for (const p of level.terrain) { const cov = coverage(p, W, H); const m = MAT[p.material || 'earth']; const f = p.fill || (m === 2 ? 'metal' : 'natural');
+      for (let i = 0; i < W * H; i++) { if (!cov[i]) continue; if (p.op === 'erase') { mat[i] = 0; fill[i] = null; } else if (p.op === 'behind' && mat[i]) continue; else { mat[i] = m; fill[i] = f; } } }
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+    const img = x.createImageData(W, H); const bg = parseInt(th.background.slice(1), 16);
+    const t = th.texture, P = th, E = th.earth; const solid = (a, b) => a >= 0 && b >= 0 && a < W && b < H && mat[b * W + a] !== 0;
+    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+      const i = y * W + xx; let hex = null;
+      if (mat[i]) { const f = fill[i]; let depth = 0; while (depth < 8 && solid(xx, y - depth - 1)) depth++; const edge = !solid(xx - 1, y) || !solid(xx + 1, y) || !solid(xx, y + 1); let k;
+        if (f === 'metal') { const q = PLATE[mod(y, 8)][mod(xx, 8)]; k = q === 'L' || q === 'r' ? P.steel[2] : q === 'M' ? P.steel[1] : P.steel[0]; if (!solid(xx, y - 1)) k = P.steel[2]; if (!solid(xx, y + 1) || !solid(xx + 1, y)) k = P.steel[0]; if (!solid(xx - 1, y)) k = P.steel[2]; }
+        else if (f === 'bricks') { const [bw, bh] = t.brick; const row = Math.floor(y / bh), off = (row % 2) * Math.floor(bw / 2), bx = mod(xx + off, bw), by = mod(y, bh); const worn = h2(Math.floor((xx + off) / bw), row, seed ^ 0xb1c) < 0.3;
+          k = bx === bw - 1 || by === bh - 1 ? P.bricks[1] : (by === 0 || bx === 0) ? P.brickHi : (worn && h2(xx, y, seed ^ 0x77) < 0.35 ? P.brickHi : P.bricks[0]); if (t.mossOnBricks && depth === 0) k = P.surface; }
+        else if (f === 'strata') { const yy = y + Math.round(1.5 * Math.sin((xx + (seed % 97)) / 9)); k = t.strataBands[mod(yy, t.strataBands.length)]; if (h2(xx, y, seed ^ 0x5eed) < 0.08) k = E[1]; if (depth === 0) k = P.surface; }
+        else if (f === 'solid') { k = depth === 0 ? P.surface : !solid(xx, y + 1) ? E[1] : E[2]; }
+        else { const drip = Math.floor(h2(xx, 0, seed ^ 0xd1) ** 2 * (t.dripMax + 1));
+          if (depth === 0) k = h2(xx, y, seed ^ 0x5a) < 0.18 ? P.surfaceHi : P.surface; else if (depth <= 1 + drip) k = P.surface; else if (depth === 2 + drip) k = h2(xx, y, seed ^ 0x5b) < 0.5 ? P.surface : E[3];
+          else { const v = 0.6 * vnoise(xx, y, 6, 4, seed) + 0.4 * h2(xx, y, seed ^ 0xb0d); let q = v < 0.3 ? 0 : v < 0.5 ? 1 : v < 0.72 ? 2 : 3; if (edge) q = Math.max(q, 1); k = E[q]; } }
+        if (mat[i] >= 3) { const r = Math.floor(y / 8), ox = (r % 2) * 4; let cx = mod(xx + ox, 8); if (mat[i] === 4) cx = 7 - cx; const q = CHEV[mod(y, 8)][cx]; if (q === 'A') k = P.oneWay; else if (q === 'E') k = P.oneWayEdge; }
+        hex = th.palette[k]; }
+      const n = hex ? parseInt(hex.slice(1), 16) : bg; img.data.set([n >> 16, (n >> 8) & 255, n & 255, 255], i * 4);
+    }
+    x.putImageData(img, 0, 0);
+    const O = ART.objects[level.theme]; const OP = Object.assign({}, pal(), O.palette);
+    for (const hz of level.hazards || []) {
+      if (hz.kind === 'trap') { const tr = O.trap; drawRows(x, tr.idle[0], hz.x + (hz.w >> 1) - tr.anchorX, hz.y + hz.h - tr.anchorY, OP, false); continue; }
+      const o = O.hazard; for (let j = 0; j < hz.h; j++) for (let i = 0; i < hz.w; i++) { const X = hz.x + i, Y = hz.y + j; const ch = j < 3 ? o.surface[0][j][mod(X, 8)] : o.deep[mod(Y, 8)][mod(X, 8)]; if (ch === '.') continue; x.fillStyle = OP[ch]; x.fillRect(X, Y, 1, 1); }
+    }
+    for (const e of level.entrances) drawRows(x, O.entrance.frames[opts.hatchOpen ? 3 : 0], e.x - O.entrance.anchorX, e.y - O.entrance.anchorY, OP, false);
+    for (const e of level.exits) drawRows(x, O.exit.frames[0], e.x - O.exit.anchorX, e.y - O.exit.anchorY, OP, false);
+    return c;
+  }
+  const rasterise = (l) => renderLevel(l);
+  const fallback = [
+    { id: 'a', title: 'Down is the new up', tier: 1, theme: 'mossgrove' }, { id: 'b', title: 'Puff and drift', tier: 1, theme: 'reef' },
+    { id: 'c', title: 'Mind the gap', tier: 1, theme: 'sugarworks' }, { id: 'd', title: 'Stairway to heather', tier: 1, theme: 'mossgrove' },
+    { id: 'e', title: 'Punch through', tier: 1, theme: 'foundry' }, { id: 'f', title: 'Hold the line', tier: 1, theme: 'observatory' },
+    { id: 'g', title: 'Slope of hope', tier: 2, theme: 'reef' }, { id: 'h', title: 'For the many', tier: 2, theme: 'foundry' },
+    { id: 'i', title: 'Rush hour', tier: 2, theme: 'sugarworks' }, { id: 'j', title: 'Two jobs', tier: 3, theme: 'observatory' },
+    { id: 'k', title: 'Clockwork', tier: 3, theme: 'foundry' }, { id: 'l', title: 'The grand march', tier: 4, theme: 'mossgrove' },
+  ];
+  const levels = (LEVELS && LEVELS.length) ? LEVELS : fallback;
+
+  const L4 = levels[3] || levels[0];
+  document.getElementById('continue').textContent = `Continue — 4 · ${L4.title}`;
+  document.getElementById('res-eyebrow').textContent = `Level 4 · Breezy · ${L4.title}`;
+  // Logo
+  const logo = document.getElementById('logo');
+  [...'Mumblemarch'].forEach((ch) => logo.append(el(`<span aria-hidden="true">${ch}</span>`)));
+
+  // Title strip
+  const sc = document.getElementById('strip').getContext('2d');
+  const tm = theme('mossgrove');
+  sc.fillStyle = tm ? tm.background : '#101a1c'; sc.fillRect(0, 0, 400, 32);
+  sc.fillStyle = tm ? tm.palette[tm.earth[1]] : '#5a3d2b'; sc.fillRect(0, 26, 400, 6);
+  sc.fillStyle = tm ? tm.palette[tm.surface] : '#6cc04a'; sc.fillRect(0, 25, 400, 2);
+  [40, 70, 95, 130, 150, 190, 230, 262, 300, 345].forEach((xx, i) => mumble(sc, i === 5 ? 'floating' : 'walking', i * 3, xx, i === 5 ? 18 : 25, 1));
+
+  // Level select
+  const tiersEl = document.getElementById('tiers');
+  const state = (i) => (i < 3 ? 'done' : i === 3 ? 'current' : i === 4 ? 'new' : 'locked');
+  for (const t of [1, 2, 3, 4]) {
+    const list = levels.map((l, i) => ({ l, i })).filter((o) => o.l.tier === t);
+    if (!list.length) continue;
+    const sec = el(`<section class="tier"><div class="tier__head"><span class="pips" aria-label="Difficulty ${t} of 4">${[1, 2, 3, 4].map((k) => `<i class="${k <= t ? 'on' : ''}"></i>`).join('')}</span><h2>${TIERS[t][0]}</h2><p>${TIERS[t][1]}</p></div><ul class="levels"></ul></section>`);
+    const ul = sec.querySelector('ul');
+    for (const { l, i } of list) {
+      const s = state(i);
+      const card = el(`<li><button type="button" class="level-card ${s === 'current' ? 'is-current is-focus' : ''}" ${s === 'locked' ? 'aria-disabled="true"' : ''}>
+        <span class="level-card__title"><span class="num">${i + 1}</span>${s === 'locked' ? '🔒 ' : ''}${l.title}</span>
+        <span class="level-card__state">${s === 'done' ? (i === 0 ? '<span class="badge badge--perfect">★ Everyone home</span>' : '<span class="badge badge--done">✓ Completed</span> best 14 of 20') : s === 'current' ? '<span class="badge badge--new">Up next</span> Not finished yet' : s === 'new' ? '<span class="badge badge--new">New</span>' : `Locked · finish level ${i} first`}</span></button></li>`);
+      const btn = card.querySelector('button');
+      if (l.terrain) { const r = rasterise(l); const th = document.createElement('canvas'); th.width = 250; th.height = 34; const tx = th.getContext('2d'); tx.imageSmoothingEnabled = true; tx.fillStyle = (theme(l.theme) || {}).background || '#101a1c'; tx.fillRect(0, 0, 250, 34); const sw = Math.min(250, l.width * 34 / l.height); tx.drawImage(r, 0, 0, l.width, l.height, 0, 0, sw, 34); btn.insertBefore(th, btn.firstChild); }
+      else { const th = document.createElement('canvas'); th.width = 250; th.height = 34; const tx = th.getContext('2d'); tx.fillStyle = '#0c0a1a'; tx.fillRect(0, 0, 250, 34); btn.insertBefore(th, btn.firstChild); }
+      ul.append(card);
+    }
+    tiersEl.append(sec);
+  }
+
+  // Briefing (level 4 or the first level with terrain)
+  const L = levels[3] || levels[0];
+  const b = document.getElementById('briefing');
+  const secs = L.timeLimitSeconds || 300;
+  const skills = L.skills || { builder: 5, digger: 1 };
+  const pct = L.lemmings ? Math.round((L.saveRequired / L.lemmings) * 100) : 50;
+  b.append(
+    el(`<div class="row" style="justify-content:space-between"><p class="eyebrow">Level ${levels.indexOf(L) + 1} · ${TIERS[L.tier || 1][0]}</p><span></span></div>`),
+    el(`<h1 class="display" style="font-size:3rem;margin-top:-12px">${L.title}</h1>`));
+  if (L.terrain) { const r = renderLevel(L, { hatchOpen: true }); const k = Math.max(1, Math.floor(Math.min(1200 / L.width, 2))); r.className = 'thumb'; r.style.width = `${L.width * k}px`; r.style.justifySelf = 'center'; b.append(r); }
+  b.append(el(`<dl class="stats">
+    <div><dt>Mumbles</dt><dd>${L.lemmings || 20}</dd></div>
+    <div><dt>Save</dt><dd>${L.saveRequired || 10} <small>(${pct}%)</small></dd></div>
+    <div><dt>Release rate</dt><dd>${L.releaseRate || 50}</dd></div>
+    <div><dt>Time</dt><dd>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</dd></div>
+    <div><dt>Tier</dt><dd style="font-family:var(--font-ui)">${TIERS[L.tier || 1][0]}</dd></div></dl>`));
+  const chips = el('<div class="stack" style="gap:8px"><p class="label-caps">Skills available</p><ul class="skillchips"></ul></div>');
+  const NAMES = { climber: 'Climber', floater: 'Floater', bomber: 'Bomber', blocker: 'Blocker', builder: 'Builder', basher: 'Basher', miner: 'Miner', digger: 'Digger' };
+  Object.keys(NAMES).forEach((k) => { if (!skills[k]) return; const li = el(`<li><span>${NAMES[k]}</span><b>×${skills[k]}</b></li>`); li.insertBefore(icon(k), li.firstChild); chips.querySelector('ul').append(li); });
+  b.append(chips);
+  b.append(el(`<div class="hint"><button class="button" type="button" aria-expanded="false">💡 Show hint</button><span class="eyebrow">Hints are hidden until you ask — no spoilers.</span></div>`));
+  b.append(el(`<div class="row"><button class="button button--primary button--wide is-focus" type="button">Let’s march! <span class="kbd" style="margin-left:6px">Enter</span></button><button class="button" type="button">Back to levels <span class="kbd" style="margin-left:6px">Esc</span></button></div>`));
+
+  // Results hop strip
+  const hc = document.getElementById('hop').getContext('2d');
+  [12, 26, 40, 54, 68, 82, 96, 110].forEach((xx, i) => mumble(hc, i % 3 === 0 ? 'exiting' : 'walking', i, xx, i % 2 ? 15 : 13, 1));
+})();
+</script>
+</body>
+</html>

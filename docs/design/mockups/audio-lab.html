@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mumblemarch · Audio lab</title>
+<style>
+  :root {
+    --bg: #12132a; --surface: #1c1e3e; --raised: #272a55; --border: #4a4f8c;
+    --text: #f4f1ff; --muted: #c3bee3; --accent: #ffc53d; --coral: #ff8a6b;
+    --ok: #7ee0a1; --warn: #ffb36b; --bad: #ff8080; --focus: #ffd84a;
+    --font: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 var(--font); }
+  main { max-width: 1240px; margin: 0 auto; padding: 20px 20px 48px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  h1 span { color: var(--accent); }
+  h2 { font-size: 1.15rem; margin: 28px 0 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  h3 { font-size: .95rem; margin: 18px 0 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  p.lead { color: var(--muted); margin: 0 0 14px; max-width: 80ch; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .controls label { color: var(--muted); font-size: .9rem; }
+  button { font: inherit; color: var(--text); background: var(--raised); border: 2px solid var(--border);
+    border-radius: 6px; min-height: 44px; min-width: 44px; padding: 6px 14px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  button.primary { background: var(--accent); color: #231a00; border-color: var(--accent); font-weight: 700; }
+  select, input[type=number] { font: inherit; background: var(--raised); color: var(--text); border: 2px solid var(--border);
+    border-radius: 6px; min-height: 44px; padding: 4px 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 10px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+    display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; align-items: start; }
+  .card button { grid-row: span 3; font-family: var(--mono); font-size: .85rem; min-width: 128px; text-align: left; }
+  .card .cap { font-weight: 600; color: var(--accent); min-height: 1.2em; }
+  .card .vis { color: var(--muted); font-size: .82rem; }
+  .card .m { font-family: var(--mono); font-size: .78rem; color: var(--muted); }
+  .tag { display: inline-block; font: 600 .7rem var(--mono); padding: 1px 6px; border-radius: 10px; border: 1px solid var(--border); margin-left: 6px; color: var(--muted); }
+  .tag.voice { border-color: var(--coral); color: var(--coral); }
+  table { border-collapse: collapse; width: 100%; font-size: .85rem; }
+  th, td { border-bottom: 1px solid var(--border); padding: 5px 8px; text-align: right; font-family: var(--mono); }
+  th { color: var(--muted); font-family: var(--font); font-weight: 600; background: var(--surface); position: sticky; top: 0; }
+  th:first-child, td:first-child, td.l, th.l { text-align: left; }
+  td.ok { color: var(--ok); } td.warn { color: var(--warn); } td.bad { color: var(--bad); }
+  .scroll { overflow-x: auto; }
+  .status { font-family: var(--mono); color: var(--muted); font-size: .85rem; }
+  canvas { display: block; width: 100%; max-width: 1200px; height: auto; background: #0c0d1f; border: 1px solid var(--border); border-radius: 6px; image-rendering: pixelated; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; margin-right: 16px; font-size: .85rem; color: var(--muted); }
+  .legend i { width: 14px; height: 8px; display: inline-block; border-radius: 2px; }
+  footer { color: var(--muted); font-size: .8rem; margin-top: 30px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Mumblemarch · <span>Audio lab</span></h1>
+  <p class="lead">Every sound effect recipe from <code>docs/design/parts/audio-copy.md</code>, implemented with the
+    <code>SfxRecipe</code> signature of <code>src/audio/sfx.ts</code>: <code>(ctx, out, when, pitch) =&gt; void</code>. Only voice
+    chirps and <code>builder-low</code> read <code>pitch</code>; the others ignore it, so they also run as <code>(ctx, out, when)</code>.
+    Console: <code>await measureAll()</code> / <code>await checkMusic()</code> return JSON. Nothing plays until you click. <b>Measure all</b> renders each recipe offline (44.1 kHz, 2 s, unity
+    bus gain) and reports duration-to-silence (−60 dBFS), peak and loudness.</p>
+
+  <div class="controls" role="group" aria-label="Lab controls">
+    <button class="primary" id="btn-measure" type="button">Measure all</button>
+    <label><input type="checkbox" id="chk-mix" checked> Play through default mix (master 0.7 × bus, limiter)</label>
+    <label for="inp-mumble">Mumble id (voice pitch)</label>
+    <input id="inp-mumble" type="number" min="0" max="79" value="0" style="width:84px">
+    <span class="status" id="pitch-out">±0 st</span>
+    <span class="status" id="measure-status" role="status"></span>
+  </div>
+
+  <div id="cards"></div>
+
+  <h2>Measurements (offline, unity gain)</h2>
+  <p class="lead">Targets. Peak ≤ −6 dBFS for every recipe. Loudness is the loudest 50 ms window (short-term RMS):
+    <b>UI −27 ± 3</b>, <b>Cues −22 ± 3</b>, <b>Events −18 ± 3</b> dBFS. With the default mix, sfx output is multiplied by
+    0.7 × 0.8 = 0.56 (−5 dB), so effective peaks stay ≤ −11 dBFS.</p>
+  <div class="scroll"><table id="measure-table">
+    <thead><tr><th class="l">SfxId</th><th class="l">Tier</th><th class="l">Bus</th><th>G</th><th>Dur to −60 dB (ms)</th><th>Peak dBFS</th><th>RMS active dBFS</th><th>Short-term max dBFS</th><th class="l">Check</th></tr></thead>
+    <tbody><tr><td class="l" colspan="9">Press “Measure all”.</td></tr></tbody>
+  </table></div>
+
+  <h2>Music loops (note-data check)</h2>
+  <div class="controls" role="group" aria-label="Music controls">
+    <label for="sel-theme">Theme</label>
+    <select id="sel-theme"></select>
+    <button type="button" id="btn-play">Play loop</button>
+    <button type="button" id="btn-stop">Stop</button>
+    <button type="button" id="btn-check">Check all themes offline</button>
+    <span class="status" id="music-status" role="status"></span>
+  </div>
+  <p class="legend" aria-hidden="true"><span><i style="background:#ffc53d"></i>lead</span><span><i style="background:#ff8a6b"></i>bass</span><span><i style="background:#8fd3ff"></i>arp</span><span><i style="background:#9a95c9"></i>drums (k / s / h)</span></p>
+  <canvas id="roll" width="1200" height="260" aria-label="Piano roll of the selected theme loop"></canvas>
+  <div class="scroll" style="margin-top:12px"><table id="music-table">
+    <thead><tr><th class="l">Theme</th><th class="l">Title</th><th>BPM</th><th class="l">Key</th><th>Bars</th><th>Notes</th><th>Loop (s)</th><th>Peak dBFS</th><th>RMS dBFS</th><th class="l">Parse</th></tr></thead>
+    <tbody><tr><td class="l" colspan="10">Press “Check all themes offline”.</td></tr></tbody>
+  </table></div>
+  <footer>Original sounds and melodies written for Mumblemarch. No samples, no voice recordings, no tunes from the 1991 game.</footer>
+</main>
+
+<script>
+'use strict';
+/* =====================================================================================
+ * Shared synth helpers — port 1:1 to src/audio/synth.ts
+ * ===================================================================================== */
+var NOISE_CACHE = new WeakMap();
+/** 1 s of deterministic white noise per context (seeded LCG: measurements are reproducible). */
+function noiseBuffer(ctx) {
+  var b = NOISE_CACHE.get(ctx);
+  if (!b) {
+    b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    var d = b.getChannelData(0), s = 0x2468ace;
+    for (var i = 0; i < d.length; i++) { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; d[i] = s / 2147483648 - 1; }
+    NOISE_CACHE.set(ctx, b);
+  }
+  return b;
+}
+var WAVE_CACHE = new WeakMap();
+/** Band-limited pulse wave with duty cycle `duty` (0.125, 0.25, 0.5), 32 harmonics. */
+function pulseWave(ctx, duty) {
+  var m = WAVE_CACHE.get(ctx);
+  if (!m) { m = new Map(); WAVE_CACHE.set(ctx, m); }
+  var w = m.get(duty);
+  if (!w) {
+    var n = 32, re = new Float32Array(n), im = new Float32Array(n);
+    for (var k = 1; k < n; k++) re[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * duty);
+    w = ctx.createPeriodicWave(re, im);
+    m.set(duty, w);
+  }
+  return w;
+}
+/** Linear attack to `peak`, exponential decay to −60 dB of peak over `d`, then hard 0. */
+function envAD(p, t, a, peak, d) {
+  p.setValueAtTime(0, t);
+  p.linearRampToValueAtTime(peak, t + a);
+  p.exponentialRampToValueAtTime(Math.max(peak * 0.001, 1e-6), t + a + d);
+  p.setValueAtTime(0, t + a + d + 0.001);
+}
+/** {type, f, Q?, f1?, fd?, f2?, fd2?}: optional exponential sweeps f→f1 (at t+fd) →f2 (at t+fd2). */
+function mkFilter(ctx, s, t) {
+  var b = ctx.createBiquadFilter();
+  b.type = s.type;
+  b.Q.value = s.Q == null ? 0.7 : s.Q;
+  b.frequency.setValueAtTime(s.f, t);
+  if (s.f1) b.frequency.exponentialRampToValueAtTime(s.f1, t + (s.fd || 0.2));
+  if (s.f2) b.frequency.exponentialRampToValueAtTime(s.f2, t + (s.fd2 || 0.4));
+  return b;
+}
+/** Enveloped oscillator. o: {t, type|duty, f, f1?, gd?, lin?, a, d, peak, vib?:[rateHz, cents], filter?} */
+function tone(ctx, out, o) {
+  var t = o.t, end = t + o.a + o.d;
+  var osc = ctx.createOscillator();
+  if (o.duty) osc.setPeriodicWave(pulseWave(ctx, o.duty)); else osc.type = o.type || 'sine';
+  osc.frequency.setValueAtTime(o.f, t);
+  if (o.f1) {
+    var ge = t + (o.gd || (o.a + o.d));
+    if (o.lin) osc.frequency.linearRampToValueAtTime(o.f1, ge); else osc.frequency.exponentialRampToValueAtTime(o.f1, ge);
+  }
+  if (o.vib) {
+    var l = ctx.createOscillator(), lg = ctx.createGain();
+    l.frequency.value = o.vib[0]; lg.gain.value = o.vib[1];
+    l.connect(lg); lg.connect(osc.detune); l.start(t); l.stop(end + 0.05);
+  }
+  var g = ctx.createGain();
+  envAD(g.gain, t, o.a, o.peak, o.d);
+  var node = osc;
+  if (o.filter) { var f = mkFilter(ctx, o.filter, t); node.connect(f); node = f; }
+  node.connect(g); g.connect(out);
+  osc.start(t); osc.stop(end + 0.05);
+}
+/** Enveloped noise through 0..n filters. o: {t, a, d, peak, filter?: spec | spec[], off?} */
+function noise(ctx, out, o) {
+  var t = o.t, end = t + o.a + o.d;
+  var src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(ctx); src.loop = true;
+  var node = src, fs = o.filter ? (Array.isArray(o.filter) ? o.filter : [o.filter]) : [];
+  for (var i = 0; i < fs.length; i++) { var f = mkFilter(ctx, fs[i], t); node.connect(f); node = f; }
+  var g = ctx.createGain();
+  envAD(g.gain, t, o.a, o.peak, o.d);
+  node.connect(g); g.connect(out);
+  src.start(t, o.off || 0); src.stop(end + 0.05);
+}
+/** 2-operator FM bell. o: {t, f, ratio, index, d, peak} (inharmonic ratio = metallic). */
+function bell(ctx, out, o) {
+  var t = o.t, end = t + o.d;
+  var car = ctx.createOscillator(), mod = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain();
+  car.frequency.setValueAtTime(o.f, t);
+  mod.frequency.setValueAtTime(o.f * o.ratio, t);
+  mg.gain.setValueAtTime(o.f * o.index, t);
+  mg.gain.exponentialRampToValueAtTime(o.f * o.index * 0.02, end);
+  mod.connect(mg); mg.connect(car.frequency);
+  envAD(g.gain, t, 0.002, o.peak, o.d);
+  car.connect(g); g.connect(out);
+  car.start(t); mod.start(t); car.stop(end + 0.05); mod.stop(end + 0.05);
+}
+/**
+ * Wordless "mumble voice": sawtooth → two parallel band-pass formants (F1, F2) → syllable envelope.
+ * Pitch `p` scales the glottal pitch only (formants stay put, so higher mumbles sound smaller, not chipmunked).
+ * sylls: [{at, dur, f0, f1, F1, F2, F1b?, F2b?, v?}] (seconds relative to t, Hz).
+ */
+function voice(ctx, out, t, p, sylls, peak, opt) {
+  opt = opt || {};
+  var src = ctx.createOscillator(); src.type = 'sawtooth';
+  var lfo = ctx.createOscillator(), lg = ctx.createGain();
+  lfo.frequency.value = opt.vibRate || 7; lg.gain.value = opt.vibCents || 20;
+  lfo.connect(lg); lg.connect(src.detune);
+  var f1 = ctx.createBiquadFilter(), f2 = ctx.createBiquadFilter(), g2 = ctx.createGain(), env = ctx.createGain();
+  f1.type = 'bandpass'; f1.Q.value = 5; f2.type = 'bandpass'; f2.Q.value = 8; g2.gain.value = 0.6;
+  src.connect(f1); src.connect(f2); f2.connect(g2); f1.connect(env); g2.connect(env); env.connect(out);
+  env.gain.setValueAtTime(0, t);
+  var last = t;
+  for (var i = 0; i < sylls.length; i++) {
+    var s = sylls[i], s0 = t + s.at, s1 = s0 + s.dur, v = peak * (s.v || 1);
+    src.frequency.setValueAtTime(s.f0 * p, s0);
+    src.frequency.exponentialRampToValueAtTime(s.f1 * p, s1);
+    f1.frequency.setValueAtTime(s.F1, s0); f2.frequency.setValueAtTime(s.F2, s0);
+    if (s.F1b) f1.frequency.linearRampToValueAtTime(s.F1b, s1);
+    if (s.F2b) f2.frequency.linearRampToValueAtTime(s.F2b, s1);
+    env.gain.setValueAtTime(0, s0);
+    env.gain.linearRampToValueAtTime(v, s0 + 0.012);
+    env.gain.setValueAtTime(v, Math.max(s0 + 0.013, s1 - 0.035));
+    env.gain.linearRampToValueAtTime(0, s1);
+    last = s1;
+  }
+  src.start(t); lfo.start(t); src.stop(last + 0.05); lfo.stop(last + 0.05);
+}
+/** Deterministic per-mumble voice pitch: −3..+3 semitones from the id (7 consecutive ids never repeat). */
+function voicePitchSemitones(id) { return ((id * 5 + 3) % 7) - 3; }
+function voicePitch(id) { return Math.pow(2, voicePitchSemitones(id) / 12); }
+
+/* =====================================================================================
+ * SFX recipes — SfxRecipe = (ctx, out, when) => void. `G` is the calibrated level of each recipe
+ * (every internal peak is relative to it, so loudness scales linearly with G).
+ * ===================================================================================== */
+var SFX = {
+  // ─── UI tier ───────────────────────────────────────────────────────────────────────
+  'ui-move': function (ctx, out, when) { var G = 0.2251;
+    tone(ctx, out, { t: when, type: 'sine', f: 1200, a: 0.003, d: 0.04, peak: G }); },
+  'ui-select': function (ctx, out, when) { var G = 0.203;
+    tone(ctx, out, { t: when, type: 'triangle', f: 880, a: 0.003, d: 0.05, peak: G });
+    tone(ctx, out, { t: when + 0.045, type: 'triangle', f: 1320, a: 0.003, d: 0.07, peak: G }); },
+  'ui-back': function (ctx, out, when) { var G = 0.2033;
+    tone(ctx, out, { t: when, type: 'triangle', f: 1320, a: 0.003, d: 0.05, peak: G });
+    tone(ctx, out, { t: when + 0.045, type: 'triangle', f: 880, a: 0.003, d: 0.07, peak: G }); },
+  'ui-deny': function (ctx, out, when) { var G = 0.1387;
+    tone(ctx, out, { t: when, type: 'square', f: 185, a: 0.004, d: 0.06, peak: G, filter: { type: 'lowpass', f: 1100 } });
+    tone(ctx, out, { t: when + 0.09, type: 'square', f: 175, a: 0.004, d: 0.08, peak: G, filter: { type: 'lowpass', f: 1100 } }); },
+  'ui-empty': function (ctx, out, when) { var G = 0.1518;
+    tone(ctx, out, { t: when, type: 'sine', f: 330, f1: 190, a: 0.004, d: 0.1, peak: G });
+    noise(ctx, out, { t: when, a: 0.002, d: 0.05, peak: G * 0.35, filter: { type: 'bandpass', f: 650, Q: 1.5 } }); },
+  'ui-arm': function (ctx, out, when) { var G = 0.1368;
+    tone(ctx, out, { t: when, type: 'triangle', f: 660, a: 0.005, d: 0.09, peak: G });
+    tone(ctx, out, { t: when + 0.11, type: 'triangle', f: 880, a: 0.005, d: 0.2, peak: G, vib: [9, 25] });
+    tone(ctx, out, { t: when + 0.11, duty: 0.25, f: 1760, a: 0.005, d: 0.12, peak: G * 0.25 }); },
+  'pause': function (ctx, out, when) { var G = 0.1738;
+    tone(ctx, out, { t: when, type: 'triangle', f: 880, a: 0.004, d: 0.07, peak: G });
+    tone(ctx, out, { t: when + 0.07, type: 'triangle', f: 587, a: 0.004, d: 0.12, peak: G }); },
+  'unpause': function (ctx, out, when) { var G = 0.1741;
+    tone(ctx, out, { t: when, type: 'triangle', f: 587, a: 0.004, d: 0.07, peak: G });
+    tone(ctx, out, { t: when + 0.07, type: 'triangle', f: 880, a: 0.004, d: 0.12, peak: G }); },
+  'ff-on': function (ctx, out, when) { var G = 0.2225;
+    tone(ctx, out, { t: when, type: 'triangle', f: 500, f1: 1400, gd: 0.06, a: 0.003, d: 0.07, peak: G });
+    tone(ctx, out, { t: when + 0.07, type: 'triangle', f: 500, f1: 1400, gd: 0.06, a: 0.003, d: 0.07, peak: G }); },
+  'ff-off': function (ctx, out, when) { var G = 0.2225;
+    tone(ctx, out, { t: when, type: 'triangle', f: 1400, f1: 500, gd: 0.06, a: 0.003, d: 0.07, peak: G });
+    tone(ctx, out, { t: when + 0.07, type: 'triangle', f: 1400, f1: 500, gd: 0.06, a: 0.003, d: 0.07, peak: G }); },
+  'rr-up': function (ctx, out, when) { var G = 0.3209;
+    tone(ctx, out, { t: when, type: 'triangle', f: 1046, a: 0.002, d: 0.03, peak: G });
+    noise(ctx, out, { t: when, a: 0.001, d: 0.006, peak: G * 0.3, filter: { type: 'highpass', f: 4000 } }); },
+  'rr-down': function (ctx, out, when) { var G = 0.3209;
+    tone(ctx, out, { t: when, type: 'triangle', f: 784, a: 0.002, d: 0.03, peak: G });
+    noise(ctx, out, { t: when, a: 0.001, d: 0.006, peak: G * 0.3, filter: { type: 'highpass', f: 4000 } }); },
+  'undo': function (ctx, out, when) { var G = 0.1348;
+    tone(ctx, out, { t: when, type: 'sine', f: 1600, f1: 380, gd: 0.14, a: 0.003, d: 0.14, peak: G });
+    tone(ctx, out, { t: when + 0.05, type: 'sine', f: 1200, f1: 300, gd: 0.12, a: 0.003, d: 0.12, peak: G * 0.5 }); },
+
+  // ─── Cue tier ──────────────────────────────────────────────────────────────────────
+  'assign': function (ctx, out, when) { var G = 0.4105;
+    tone(ctx, out, { t: when, type: 'triangle', f: 260, f1: 150, a: 0.002, d: 0.07, peak: G });
+    noise(ctx, out, { t: when, a: 0.001, d: 0.012, peak: G * 0.25, filter: { type: 'lowpass', f: 2200 } }); },
+  'fuse': function (ctx, out, when) { var G = 0.3839;
+    noise(ctx, out, { t: when, a: 0.01, d: 0.35, peak: G * 0.5, filter: { type: 'highpass', f: 4500 } });
+    var ticks = [0.03, 0.08, 0.13, 0.2, 0.27];
+    for (var i = 0; i < ticks.length; i++) noise(ctx, out, { t: when + ticks[i], a: 0.001, d: 0.012, peak: G, off: i * 0.1, filter: { type: 'bandpass', f: 3200, Q: 3 } });
+    tone(ctx, out, { t: when, type: 'sine', f: 1800, f1: 2700, a: 0.005, d: 0.06, peak: G * 0.3 }); },
+  'builder-low': function (ctx, out, when, pitch) { var G = 0.3124; var p = pitch || 1;
+    // pitch = 1 / 1.1667 / 1.3333 for 3 / 2 / 1 bricks left (≈1.8 / 2.1 / 2.4 kHz)
+    tone(ctx, out, { t: when, type: 'triangle', f: 1800 * p, a: 0.002, d: 0.12, peak: G });
+    tone(ctx, out, { t: when, type: 'sine', f: 3600 * p, a: 0.002, d: 0.05, peak: G * 0.25 }); },
+  'builder-shrug': function (ctx, out, when, pitch) { var G = 0.2339; var p = pitch || 1;
+    voice(ctx, out, when, p, [
+      { at: 0, dur: 0.1, f0: 330, f1: 335, F1: 300, F2: 1000 },
+      { at: 0.14, dur: 0.16, f0: 300, f1: 400, F1: 300, F2: 1100 },
+    ], G, { vibRate: 5, vibCents: 15 }); },
+  'steel': function (ctx, out, when) { var G = 0.2288;
+    bell(ctx, out, { t: when, f: 1760, ratio: 1.41, index: 3, d: 0.16, peak: G });
+    noise(ctx, out, { t: when, a: 0.001, d: 0.008, peak: G * 0.8, filter: { type: 'bandpass', f: 5000, Q: 2 } }); },
+  'time-low': function (ctx, out, when) { var G = 0.3995;
+    tone(ctx, out, { t: when, type: 'sine', f: 820, a: 0.001, d: 0.05, peak: G });
+    noise(ctx, out, { t: when, a: 0.001, d: 0.02, peak: G * 0.6, filter: { type: 'bandpass', f: 1600, Q: 5 } });
+    tone(ctx, out, { t: when + 0.25, type: 'sine', f: 620, a: 0.001, d: 0.06, peak: G * 0.8 });
+    noise(ctx, out, { t: when + 0.25, a: 0.001, d: 0.02, peak: G * 0.5, off: 0.3, filter: { type: 'bandpass', f: 1300, Q: 5 } }); },
+
+  // ─── Event tier: voice barks (voice bus; optional 4th arg = pitch ratio) ────────────
+  'lets-go': function (ctx, out, when, pitch) { var G = 0.3279; var p = pitch || 1;
+    // "Off we go!" — three rising syllables (o · e · o)
+    voice(ctx, out, when, p, [
+      { at: 0, dur: 0.09, f0: 500, f1: 540, F1: 520, F2: 900 },
+      { at: 0.12, dur: 0.08, f0: 600, f1: 660, F1: 380, F2: 2100 },
+      { at: 0.23, dur: 0.2, f0: 760, f1: 900, F1: 480, F2: 900, F2b: 800 },
+    ], G, { vibRate: 7, vibCents: 20 }); },
+  'ohno': function (ctx, out, when, pitch) { var G = 0.3224; var p = pitch || 1;
+    // "Uh-oh…" — high "uh", then a falling, wobbling "oh"
+    voice(ctx, out, when, p, [
+      { at: 0, dur: 0.12, f0: 700, f1: 690, F1: 620, F2: 1150 },
+      { at: 0.17, dur: 0.3, f0: 560, f1: 420, F1: 470, F2: 820, F2b: 760 },
+    ], G, { vibRate: 6, vibCents: 45 }); },
+  'exit': function (ctx, out, when, pitch) { var G = 1.4388; var p = pitch || 1;
+    // "Wheee!" — upward glide on "ee" + three sparkle pings
+    voice(ctx, out, when, p, [{ at: 0, dur: 0.3, f0: 600, f1: 1400, F1: 320, F2: 2300, F2b: 2600 }], G, { vibRate: 8, vibCents: 30 });
+    var sp = [2637, 3136, 3951];
+    for (var i = 0; i < sp.length; i++) tone(ctx, out, { t: when + 0.18 + i * 0.06, type: 'sine', f: sp[i], a: 0.002, d: 0.08, peak: G * 0.05 }); },
+
+  // ─── Event tier: hazards & traps ───────────────────────────────────────────────────
+  'entrance-open': function (ctx, out, when) { var G = 0.2555;
+    // hatch creak … clunk
+    tone(ctx, out, { t: when, type: 'sawtooth', f: 92, a: 0.06, d: 0.42, peak: G, vib: [11, 120], filter: { type: 'bandpass', f: 950, f1: 600, fd: 0.45, Q: 7 } });
+    tone(ctx, out, { t: when + 0.5, type: 'sine', f: 120, f1: 55, a: 0.002, d: 0.18, peak: G * 1.4 });
+    noise(ctx, out, { t: when + 0.5, a: 0.002, d: 0.09, peak: G * 0.8, filter: { type: 'lowpass', f: 450 } }); },
+  'splat': function (ctx, out, when) { var G = 0.3748;
+    tone(ctx, out, { t: when, type: 'sine', f: 150, f1: 45, a: 0.002, d: 0.14, peak: G });
+    noise(ctx, out, { t: when, a: 0.002, d: 0.12, peak: G * 0.6, filter: { type: 'lowpass', f: 900, f1: 200, fd: 0.1 } });
+    tone(ctx, out, { t: when + 0.02, type: 'triangle', f: 240, f1: 120, a: 0.002, d: 0.06, peak: G * 0.4 }); },
+  'drown': function (ctx, out, when) { var G = 0.4775;
+    var at = [0, 0.06, 0.11, 0.19, 0.24, 0.33], f = [260, 340, 300, 420, 380, 480];
+    for (var i = 0; i < at.length; i++) tone(ctx, out, { t: when + at[i], type: 'sine', f: f[i], f1: f[i] * 2.4, gd: 0.04, a: 0.004, d: 0.05, peak: G });
+    noise(ctx, out, { t: when, a: 0.02, d: 0.35, peak: G * 0.25, filter: { type: 'lowpass', f: 500 } }); },
+  'burn': function (ctx, out, when) { var G = 0.2825;
+    noise(ctx, out, { t: when, a: 0.03, d: 0.4, peak: G, filter: { type: 'highpass', f: 2500 } });
+    noise(ctx, out, { t: when, a: 0.01, d: 0.22, peak: G * 0.6, off: 0.5, filter: { type: 'bandpass', f: 1200, f1: 500, fd: 0.2, Q: 3 } });
+    tone(ctx, out, { t: when, type: 'sine', f: 420, f1: 150, a: 0.005, d: 0.2, peak: G * 0.4 }); },
+  'trap': function (ctx, out, when) { var G = 0.5554;
+    // generic fallback: snap + low clunk
+    noise(ctx, out, { t: when, a: 0.001, d: 0.02, peak: G, filter: { type: 'bandpass', f: 2500, Q: 2 } });
+    tone(ctx, out, { t: when + 0.01, type: 'square', f: 190, f1: 80, a: 0.003, d: 0.12, peak: G * 0.6, filter: { type: 'lowpass', f: 800 } }); },
+  'trap-flytrap': function (ctx, out, when) { var G = 0.4577;
+    // Mossgrove snapjaw: snap · chomp · chomp · gulp
+    noise(ctx, out, { t: when, a: 0.001, d: 0.015, peak: G, filter: { type: 'bandpass', f: 2200, Q: 2 } });
+    tone(ctx, out, { t: when + 0.05, type: 'square', f: 210, f1: 95, a: 0.003, d: 0.08, peak: G * 0.7, filter: { type: 'lowpass', f: 700 } });
+    tone(ctx, out, { t: when + 0.16, type: 'square', f: 185, f1: 85, a: 0.003, d: 0.08, peak: G * 0.7, filter: { type: 'lowpass', f: 650 } });
+    tone(ctx, out, { t: when + 0.28, type: 'sine', f: 320, f1: 120, a: 0.005, d: 0.14, peak: G * 0.8 }); },
+  'trap-press': function (ctx, out, when) { var G = 0.2766;
+    // Sugarworks cookie-cutter press: ka-CHUNK + spring boing
+    noise(ctx, out, { t: when, a: 0.001, d: 0.012, peak: G * 0.8, filter: { type: 'bandpass', f: 3200, Q: 3 } });
+    tone(ctx, out, { t: when + 0.08, type: 'sine', f: 110, f1: 50, a: 0.002, d: 0.18, peak: G * 1.2 });
+    noise(ctx, out, { t: when + 0.08, a: 0.002, d: 0.1, peak: G * 0.6, off: 0.2, filter: { type: 'lowpass', f: 500 } });
+    tone(ctx, out, { t: when + 0.12, type: 'sine', f: 290, a: 0.01, d: 0.35, peak: G * 0.35, vib: [14, 180] }); },
+  'trap-pendulum': function (ctx, out, when) { var G = 0.8237;
+    // Observatory pendulum: swish … clang
+    noise(ctx, out, { t: when, a: 0.14, d: 0.26, peak: G, filter: { type: 'bandpass', f: 400, f1: 2200, fd: 0.18, f2: 500, fd2: 0.38, Q: 2.5 } });
+    bell(ctx, out, { t: when + 0.34, f: 1400, ratio: 1.41, index: 2, d: 0.45, peak: G * 0.3 }); },
+  'trap-piston': function (ctx, out, when) { var G = 0.249;
+    // Foundry piston hammer: hiss … BANG + ring
+    noise(ctx, out, { t: when, a: 0.02, d: 0.16, peak: G * 0.4, filter: { type: 'highpass', f: 3000 } });
+    tone(ctx, out, { t: when + 0.2, type: 'sine', f: 90, f1: 40, a: 0.002, d: 0.2, peak: G * 1.2 });
+    noise(ctx, out, { t: when + 0.2, a: 0.002, d: 0.1, peak: G, off: 0.4, filter: { type: 'lowpass', f: 1200 } });
+    bell(ctx, out, { t: when + 0.2, f: 620, ratio: 2.76, index: 1.5, d: 0.4, peak: G * 0.3 }); },
+  'trap-clam': function (ctx, out, when) { var G = 0.476;
+    // Reef giant clam: clack-clack · gloop · two bubbles
+    noise(ctx, out, { t: when, a: 0.001, d: 0.025, peak: G, filter: { type: 'bandpass', f: 1300, Q: 4 } });
+    noise(ctx, out, { t: when + 0.07, a: 0.001, d: 0.025, peak: G, off: 0.3, filter: { type: 'bandpass', f: 1300, Q: 4 } });
+    tone(ctx, out, { t: when + 0.15, type: 'sine', f: 520, f1: 180, a: 0.005, d: 0.13, peak: G * 0.8 });
+    tone(ctx, out, { t: when + 0.3, type: 'sine', f: 300, f1: 700, gd: 0.04, a: 0.004, d: 0.05, peak: G * 0.5 });
+    tone(ctx, out, { t: when + 0.36, type: 'sine', f: 360, f1: 860, gd: 0.04, a: 0.004, d: 0.05, peak: G * 0.5 }); },
+
+  // ─── Event tier: big moments & stingers ────────────────────────────────────────────
+  'explosion': function (ctx, out, when) { var G = 0.2455;
+    // cartoon "pop!": bright click, falling noise puff, soft thump
+    tone(ctx, out, { t: when, type: 'square', f: 900, f1: 150, a: 0.001, d: 0.04, peak: G * 0.5 });
+    noise(ctx, out, { t: when, a: 0.002, d: 0.3, peak: G, filter: { type: 'lowpass', f: 5000, f1: 250, fd: 0.25 } });
+    tone(ctx, out, { t: when, type: 'sine', f: 120, f1: 40, a: 0.002, d: 0.22, peak: G }); },
+  'nuke': function (ctx, out, when) { var G = 0.2821;
+    // Pop all: friendly rising wind-up + "fwip"
+    tone(ctx, out, { t: when, type: 'sawtooth', f: 180, f1: 720, gd: 0.7, a: 0.08, d: 0.7, peak: G, vib: [12, 40], filter: { type: 'lowpass', f: 1400, Q: 3 } });
+    tone(ctx, out, { t: when + 0.66, type: 'sine', f: 1500, f1: 3000, a: 0.003, d: 0.1, peak: G * 0.5 }); },
+  'level-won': function (ctx, out, when) { var G = 0.2122;
+    var arp = [523.25, 659.26, 783.99];
+    for (var i = 0; i < arp.length; i++) tone(ctx, out, { t: when + i * 0.09, duty: 0.25, f: arp[i], a: 0.004, d: 0.12, peak: G });
+    tone(ctx, out, { t: when + 0.27, duty: 0.25, f: 1046.5, a: 0.004, d: 0.6, peak: G });
+    tone(ctx, out, { t: when + 0.27, type: 'triangle', f: 523.25, a: 0.004, d: 0.6, peak: G });
+    var sp = [2637, 3136, 3951];
+    for (var j = 0; j < sp.length; j++) tone(ctx, out, { t: when + 0.34 + j * 0.08, type: 'sine', f: sp[j], a: 0.002, d: 0.08, peak: G * 0.4 }); },
+  'level-lost': function (ctx, out, when) { var G = 0.2764;
+    // gentle "try again": E5 · C5 · D5 (left unresolved on purpose — hopeful, not a sad trombone)
+    tone(ctx, out, { t: when, type: 'triangle', f: 659.26, a: 0.01, d: 0.2, peak: G });
+    tone(ctx, out, { t: when + 0.24, type: 'triangle', f: 523.25, a: 0.01, d: 0.2, peak: G });
+    tone(ctx, out, { t: when + 0.5, type: 'triangle', f: 587.33, a: 0.01, d: 0.6, peak: G, vib: [5, 20] }); },
+};
+
+/* Metadata: tier, bus, trigger, caption (shown in the caption strip) and visual equivalent. */
+var META = [
+  ['ui-move', 'UI', 'sfx', 'Menu focus moves; keyboard picks another mumble', '', 'Focus ring / selection bracket moves'],
+  ['ui-select', 'UI', 'sfx', 'Button activated; skill chosen', '', 'Skill button raised + thick border'],
+  ['ui-back', 'UI', 'sfx', 'Back, cancel, dialog closed', '', 'Screen closes, focus returns'],
+  ['ui-deny', 'UI', 'sfx', 'Assignment refused (not applicable / no mumble)', '', '✕ badge on mumble, button shake, status text'],
+  ['ui-empty', 'UI', 'sfx', 'Skill with 0 left chosen or used', '', 'Dashed “0” badge + “No Diggers left”'],
+  ['ui-arm', 'UI', 'sfx', 'Pop all / Restart armed', '', 'Striped danger button: “Press again to pop all”'],
+  ['pause', 'UI', 'sfx', 'Game paused', '', '“Paused” plate over playfield, Pause pressed'],
+  ['unpause', 'UI', 'sfx', 'Game resumed', '', 'Plate disappears, Pause released'],
+  ['ff-on', 'UI', 'sfx', 'Fast-forward on', '', '“×3” badge, Fast pressed'],
+  ['ff-off', 'UI', 'sfx', 'Fast-forward off', '', 'Badge gone, Fast released'],
+  ['rr-up', 'UI', 'sfx', 'Release rate +1 / +10', '', 'Rate number + “every 1.6 s” update'],
+  ['rr-down', 'UI', 'sfx', 'Release rate −1 / −10', '', 'Rate number + “every 1.6 s” update'],
+  ['undo', 'UI', 'sfx', 'Last assignment undone', '', 'Count +1, “Undone” toast'],
+  ['assign', 'Cue', 'sfx', 'Skill accepted', '', 'Skill icon pops over mumble; count −1'],
+  ['fuse', 'Cue', 'sfx', 'Bomber accepted', '[fizz]', 'Spark on tuft + big 5→1 digits'],
+  ['builder-low', 'Cue', 'sfx', 'Each of the last 3 bricks (pitch rises)', '[plink]', 'Brick pips turn amber, 3/2/1 left'],
+  ['builder-shrug', 'Cue', 'voice', 'Builder out of bricks', 'Out of planks!', 'Shrug pose + empty-plank icon'],
+  ['steel', 'Cue', 'sfx', 'Basher/miner/digger hits steel; steel refusal', '[tink]', 'Spark + rivet icon at contact'],
+  ['time-low', 'Cue', 'sfx', 'Clock crosses 1:00, 0:30, 0:10', '[tick-tock]', 'Clock icon + bold plate on the time'],
+  ['lets-go', 'Event', 'voice', 'Level start (tick 15)', 'Off we go!', 'Caption + hatch wiggles'],
+  ['ohno', 'Event', 'voice', 'Bomber fuse runs out', 'Uh-oh…', 'Hands-on-head pose, “!” over tuft'],
+  ['exit', 'Event', 'voice', 'Mumble reaches the exit', 'Wheee!', 'Hop into door + “+1” marker'],
+  ['entrance-open', 'Event', 'sfx', 'Hatch opens (tick 35)', '[creak… clunk]', 'Hatch doors swing open'],
+  ['splat', 'Event', 'sfx', 'Fell too far', '[splat]', 'Flattened sprite + “−1”'],
+  ['drown', 'Event', 'sfx', 'Fell into water (bog, meltwater, tide pool)', '[glug glug]', 'Sinking sprite + bubbles + “−1”'],
+  ['burn', 'Event', 'sfx', 'Fell into fire (caramel, molten brass)', '[tsss!]', 'Scorch puff + “−1”'],
+  ['trap', 'Event', 'sfx', 'Trap fires (fallback)', '[snap!]', 'Trap animation + “−1”'],
+  ['trap-flytrap', 'Event', 'sfx', 'Mossgrove snapjaw flytrap', '[snap! chomp chomp]', 'Flytrap snaps shut + “−1”'],
+  ['trap-press', 'Event', 'sfx', 'Sugarworks cookie-cutter press', '[ka-chunk!]', 'Press slams + “−1”'],
+  ['trap-pendulum', 'Event', 'sfx', 'Observatory brass pendulum', '[swish… clang]', 'Pendulum sweep + “−1”'],
+  ['trap-piston', 'Event', 'sfx', 'Foundry piston hammer', '[hiss… bang!]', 'Piston drops + “−1”'],
+  ['trap-clam', 'Event', 'sfx', 'Reef giant clam', '[clack-gloop]', 'Clam snaps + “−1”'],
+  ['explosion', 'Event', 'sfx', 'Bomber / pop-all explosion', '[pop!]', 'Pop burst (≤ 3 per s) + crater + confetti'],
+  ['nuke', 'Event', 'sfx', 'Pop all confirmed', '[fizz… pop all!]', 'Every mumble shows a fuse; HUD “Popping…”'],
+  ['level-won', 'Event', 'sfx', 'Level ends, target met', '', 'Results: “Level complete!”'],
+  ['level-lost', 'Event', 'sfx', 'Level ends, target missed', '', 'Results: “Not quite this time”'],
+];
+var TARGET = { UI: [-30, -24], Cue: [-25, -19], Event: [-21, -15] };
+
+/* =====================================================================================
+ * Music: original procedural chiptune loops (note data). Tokens: note name (C4, F#5, Bb3),
+ * "." rest, "-" hold previous note. lead = 8 tokens/bar (8ths), bass = 4 tokens/bar (quarters),
+ * drums = 16 steps/bar (k kick, s snare, h hat), arp = chord tones cycled in 16ths.
+ * ===================================================================================== */
+var MUSIC = {
+  title: { title: 'Doorstep Fanfare', bpm: 124, key: 'C major', lead: 'pulse25', loop: false,
+    melody: ['C5 . E5 . G5 . C6 -', 'A5 . F5 . C5 . A5 -', 'G5 F5 E5 D5 B4 . D5 .', 'C5 - - - . . . .'],
+    bass: ['C3 G2 C3 G2', 'F2 C3 F2 C3', 'G2 D3 G2 B2', 'C3 - - .'],
+    drums: { k: 'x.......x.......', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' } },
+  mossgrove: { title: 'Bog Hop', bpm: 116, key: 'G major', lead: 'pulse25', loop: true,
+    melody: ['D5 . B4 . G4 A4 B4 -', 'C5 . E5 . D5 C5 B4 -', 'A4 . F#4 A4 D5 - C5 -', 'B4 A4 G4 . D4 . G4 .',
+             'E5 . B4 . G4 B4 E5 -', 'E5 D5 C5 . G4 . C5 .', 'D5 . F#5 . E5 D5 C5 A4', 'G4 . B4 D5 G5 - . .'],
+    bass: ['G2 D3 B2 D3', 'C3 G3 E3 G3', 'D3 A3 F#3 A3', 'G2 D3 B2 D3', 'E3 B3 G3 B3', 'C3 G3 E3 G3', 'D3 A3 F#3 A2', 'G2 D3 G2 .'],
+    drums: { k: 'x.......x.......', s: '....x.......x...', h: '..x...x...x...x.' } },
+  sugarworks: { title: 'Taffy Pull', bpm: 132, key: 'F major', lead: 'pulse12', loop: true,
+    melody: ['C5 A4 F4 A4 C5 . F5 .', 'D5 . Bb4 . D5 F5 D5 .', 'E5 . G5 . E5 C5 G4 .', 'A4 C5 F5 - . . . .',
+             'D5 F5 A5 - F5 D5 A4 .', 'Bb4 D5 F5 - D5 . Bb4 .', 'C5 E5 G5 . Bb5 . G5 E5', 'F5 . C5 . A4 . F4 .'],
+    bass: ['F2 C3 F2 C3', 'Bb2 F3 Bb2 F3', 'C3 G3 C3 G3', 'F2 C3 A2 C3', 'D3 A3 D3 A3', 'Bb2 F3 Bb2 F3', 'C3 G3 E3 G3', 'F2 C3 F2 .'],
+    drums: { k: 'x.......x.......', s: '....x.......x...', h: 'x.x.x.x.x.x.x.x.' } },
+  observatory: { title: 'Clockwork Stars', bpm: 100, key: 'D dorian', lead: 'triangle', loop: true,
+    melody: ['A4 - - - D5 - E5 -', 'F5 - E5 - C5 - - -', 'D5 - - - B4 - G4 -', 'A4 - - - . . . .',
+             'C5 - - - F5 - A5 -', 'G5 - E5 - C5 - - -', 'B4 - D5 - G5 - F5 -', 'E5 - D5 - - - . .'],
+    bass: ['D3 - A2 -', 'C3 - G2 -', 'G2 - D3 -', 'D3 - A2 -', 'F2 - C3 -', 'C3 - G2 -', 'G2 - B2 -', 'D3 - - -'],
+    arp: { chords: ['D5 F5 A5', 'C5 E5 G5', 'B4 D5 G5', 'D5 F5 A5', 'C5 F5 A5', 'C5 E5 G5', 'B4 D5 G5', 'D5 F5 A5'], pattern: [0, 1, 2, 1] },
+    drums: { k: '................', s: '................', h: 'x...x...x...x...' } },
+  foundry: { title: 'Piston Polka', bpm: 150, key: 'A harmonic minor', lead: 'pulse50', loop: true,
+    melody: ['A4 . C5 . E5 . A5 .', 'G#5 . E5 . B4 . G#4 .', 'A4 C5 E5 C5 A4 . . .', 'B4 . D5 . G#4 - E4 .',
+             'D5 . F5 . A5 . F5 .', 'E5 . C5 . A4 . C5 .', 'B4 D5 G#5 . E5 . D5 .', 'C5 B4 A4 . A4 . . .'],
+    bass: ['A2 E3 A2 E3', 'E2 B2 E2 G#2', 'A2 E3 A2 C3', 'E2 B2 G#2 B2', 'D3 A3 D3 F3', 'A2 E3 C3 E3', 'E2 B2 G#2 B2', 'A2 E3 A2 .'],
+    drums: { k: 'x...x...x...x...', s: '....x.......x..x', h: '..x...x...x...x.' } },
+  reef: { title: 'Tide Tumble', bpm: 108, key: 'B♭ major', lead: 'triangle', echo: true, loop: true,
+    melody: ['F4 . Bb4 . D5 - C5 Bb4', 'G4 - D5 - Bb4 - . .', 'G4 . Bb4 . Eb5 - D5 C5', 'C5 - F5 - A4 - . .',
+             'D5 . F5 . Bb5 - G5 F5', 'G5 - D5 - Bb4 - . .', 'Eb5 - C5 - F5 - C5 -', 'Bb4 - - - . . . .'],
+    bass: ['Bb2 - F3 D3', 'G2 - D3 Bb2', 'Eb3 - Bb2 G2', 'F2 - C3 A2', 'Bb2 - F3 D3', 'G2 - D3 Bb2', 'Eb3 - F3 -', 'Bb2 - - .'],
+    drums: { k: 'x.....x...x.....', s: '....x.......x...', h: 'x..x..x.x..x..x.' } },
+};
+/* Mix levels at unity music-bus gain (calibrated with the offline check). */
+var MIX = { lead: 0.07, bass: 0.164, arp: 0.029, kick: 0.246, snare: 0.082, hat: 0.029 };
+
+var PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function midiOf(tok) {
+  var m = /^([A-G])([#b]?)(-?\d)$/.exec(tok);
+  if (!m) return null;
+  return 12 * (Number(m[3]) + 1) + PC[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0);
+}
+function hz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+/** Parse bars of tokens into [{step, len, midi}] (step unit = 1/perBar of a bar). */
+function parseTrack(bars, perBar, errors, label) {
+  var notes = [];
+  bars.forEach(function (bar, bi) {
+    var toks = bar.trim().split(/\s+/);
+    if (toks.length !== perBar) errors.push(label + ' bar ' + (bi + 1) + ': ' + toks.length + ' tokens, expected ' + perBar);
+    toks.forEach(function (tok, i) {
+      var step = bi * perBar + i;
+      if (tok === '.') return;
+      if (tok === '-') {
+        var last = notes[notes.length - 1];
+        if (last && last.step + last.len === step) last.len++; else errors.push(label + ' bar ' + (bi + 1) + ': orphan hold');
+        return;
+      }
+      var mi = midiOf(tok);
+      if (mi === null) errors.push(label + ' bar ' + (bi + 1) + ': bad token ' + tok); else notes.push({ step: step, len: 1, midi: mi });
+    });
+  });
+  return notes;
+}
+function compileTheme(th) {
+  var errors = [], bars = th.melody.length;
+  if (th.bass.length !== bars) errors.push('bass has ' + th.bass.length + ' bars, melody ' + bars);
+  var lead = parseTrack(th.melody, 8, errors, 'lead');
+  var bass = parseTrack(th.bass, 4, errors, 'bass');
+  var arp = [];
+  if (th.arp) th.arp.chords.forEach(function (ch, bi) {
+    var tones = ch.split(/\s+/).map(midiOf);
+    for (var s = 0; s < 16; s++) arp.push({ step: bi * 16 + s, len: 1, midi: tones[th.arp.pattern[s % th.arp.pattern.length]] });
+  });
+  var drums = [];
+  ['k', 's', 'h'].forEach(function (kind) {
+    var pat = th.drums[kind];
+    if (pat.length !== 16) errors.push('drum ' + kind + ' pattern length ' + pat.length);
+    for (var b = 0; b < bars; b++) for (var s = 0; s < 16; s++) if (pat[s] === 'x') drums.push({ step: b * 16 + s, kind: kind });
+  });
+  var beat = 60 / th.bpm;
+  return { lead: lead, bass: bass, arp: arp, drums: drums, errors: errors, bars: bars, beat: beat, loopDur: bars * 4 * beat };
+}
+function instrNote(ctx, out, kind, th, t, dur, f) {
+  var osc = ctx.createOscillator(), g = ctx.createGain(), L;
+  if (kind === 'lead') {
+    L = MIX.lead;
+    if (th.lead === 'triangle') { osc.type = 'triangle'; L *= 1.6; }
+    else osc.setPeriodicWave(pulseWave(ctx, th.lead === 'pulse12' ? 0.125 : th.lead === 'pulse25' ? 0.25 : 0.5));
+  } else if (kind === 'bass') { osc.type = 'triangle'; L = MIX.bass; }
+  else { osc.setPeriodicWave(pulseWave(ctx, 0.5)); L = MIX.arp; }
+  osc.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(L, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(L * 0.55, t + Math.min(0.08, dur * 0.6));
+  g.gain.setValueAtTime(L * 0.55, t + Math.max(Math.min(0.081, dur * 0.61), dur - 0.03));
+  g.gain.linearRampToValueAtTime(0, t + dur);
+  osc.connect(g); g.connect(out);
+  osc.start(t); osc.stop(t + dur + 0.02);
+}
+function drumHit(ctx, out, kind, t) {
+  if (kind === 'k') tone(ctx, out, { t: t, type: 'sine', f: 150, f1: 45, gd: 0.1, a: 0.002, d: 0.15, peak: MIX.kick });
+  else if (kind === 's') {
+    noise(ctx, out, { t: t, a: 0.001, d: 0.12, peak: MIX.snare, filter: { type: 'bandpass', f: 1800, Q: 0.8 } });
+    tone(ctx, out, { t: t, type: 'triangle', f: 190, a: 0.001, d: 0.06, peak: MIX.snare * 0.5 });
+  } else noise(ctx, out, { t: t, a: 0.001, d: 0.03, peak: MIX.hat, off: 0.6, filter: { type: 'highpass', f: 7000 } });
+}
+/** Schedule one full pass of a theme starting at t0 on `out`. Returns the pass duration. */
+function scheduleTheme(ctx, out, th, t0) {
+  var c = compileTheme(th), e8 = c.beat / 2, e16 = c.beat / 4, leadOut = out;
+  if (th.echo) {
+    var dl = ctx.createDelay(1), fb = ctx.createGain(), wet = ctx.createGain(), bus = ctx.createGain();
+    dl.delayTime.value = 3 * e16; fb.gain.value = 0.3; wet.gain.value = 0.35;
+    bus.connect(out); bus.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(out);
+    leadOut = bus;
+  }
+  c.lead.forEach(function (n) { instrNote(ctx, leadOut, 'lead', th, t0 + n.step * e8, n.len * e8 * 0.9, hz(n.midi)); });
+  c.bass.forEach(function (n) { instrNote(ctx, out, 'bass', th, t0 + n.step * c.beat, Math.min(n.len * c.beat * 0.9, c.beat * 0.55 + (n.len - 1) * c.beat), hz(n.midi)); });
+  c.arp.forEach(function (n) { instrNote(ctx, out, 'arp', th, t0 + n.step * e16, e16 * 0.7, hz(n.midi)); });
+  c.drums.forEach(function (d) { drumHit(ctx, out, d.kind, t0 + d.step * e16); });
+  return c.loopDur;
+}
+
+/* =====================================================================================
+ * Measurement (OfflineAudioContext, 44.1 kHz, 2 s)
+ * ===================================================================================== */
+function db(x) { return x > 0 ? 20 * Math.log10(x) : -Infinity; }
+function analyse(d, sr) {
+  var peak = 0, last = -1, i;
+  for (i = 0; i < d.length; i++) { var v = Math.abs(d[i]); if (v > peak) peak = v; if (v > 0.001) last = i; }
+  var end = last + 1, sum = 0;
+  for (i = 0; i < end; i++) sum += d[i] * d[i];
+  var w = Math.round(0.05 * sr), hop = Math.round(0.005 * sr), pre = new Float64Array(d.length + 1);
+  for (i = 0; i < d.length; i++) pre[i + 1] = pre[i] + d[i] * d[i];
+  var st = 0;
+  for (i = 0; i + w <= Math.max(end, w); i += hop) { var e = (pre[Math.min(i + w, d.length)] - pre[i]) / w; if (e > st) st = e; }
+  return { durMs: (end / sr) * 1000, peakDb: db(peak), rmsDb: db(Math.sqrt(sum / Math.max(1, end))), stDb: db(Math.sqrt(st)), cutOff: last >= d.length - 1 };
+}
+function gOf(id) { var m = /var G = ([0-9.]+)/.exec(String(SFX[id])); return m ? Number(m[1]) : NaN; }
+function measureOne(id) {
+  var sr = 44100, ctx = new OfflineAudioContext(1, sr * 2, sr);
+  SFX[id](ctx, ctx.destination, 0);
+  return ctx.startRendering().then(function (buf) { var r = analyse(buf.getChannelData(0), sr); r.id = id; r.G = gOf(id); return r; });
+}
+function fmt(x, n) { return isFinite(x) ? x.toFixed(n == null ? 1 : n) : '−∞'; }
+function measureAll() {
+  var status = document.getElementById('measure-status');
+  status.textContent = 'Measuring…';
+  var rows = [];
+  return META.reduce(function (p, m) {
+    return p.then(function () { return measureOne(m[0]).then(function (r) { r.tier = m[1]; r.bus = m[2]; rows.push(r); }); });
+  }, Promise.resolve()).then(function () {
+    var tb = document.querySelector('#measure-table tbody'), ok = 0;
+    tb.innerHTML = '';
+    rows.forEach(function (r) {
+      var tg = TARGET[r.tier], peakOk = r.peakDb <= -6, lo = r.stDb >= tg[0] && r.stDb <= tg[1];
+      r.pass = peakOk && lo && !r.cutOff;
+      if (r.pass) ok++;
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + r.id + '</td><td class="l">' + r.tier + '</td><td class="l">' + r.bus + '</td><td>' + r.G.toFixed(4) +
+        '</td><td>' + fmt(r.durMs, 0) + '</td><td class="' + (peakOk ? 'ok' : 'bad') + '">' + fmt(r.peakDb) + '</td><td>' + fmt(r.rmsDb) +
+        '</td><td class="' + (lo ? 'ok' : 'warn') + '">' + fmt(r.stDb) + '</td><td class="l ' + (r.pass ? 'ok' : 'bad') + '">' +
+        (r.pass ? '✓ in range' : (peakOk ? '' : 'peak! ') + (lo ? '' : 'loudness ') + (r.cutOff ? 'cut off' : '')) + '</td>';
+      tb.appendChild(tr);
+      var cell = document.querySelector('[data-m="' + r.id + '"]');
+      if (cell) cell.textContent = fmt(r.durMs, 0) + ' ms · peak ' + fmt(r.peakDb) + ' · loud ' + fmt(r.stDb) + ' dBFS ' + (r.pass ? '✓' : '⚠');
+    });
+    status.textContent = ok + ' / ' + rows.length + ' recipes within target.';
+    return rows.map(function (r) { return { id: r.id, tier: r.tier, bus: r.bus, G: r.G, durMs: Math.round(r.durMs), peakDb: +r.peakDb.toFixed(1), rmsDb: +r.rmsDb.toFixed(1), stDb: +r.stDb.toFixed(1), pass: r.pass }; });
+  });
+}
+function checkMusic() {
+  var status = document.getElementById('music-status');
+  status.textContent = 'Rendering…';
+  var ids = Object.keys(MUSIC), out = [];
+  return ids.reduce(function (p, id) {
+    return p.then(function () {
+      var th = MUSIC[id], c = compileTheme(th), sr = 44100;
+      var ctx = new OfflineAudioContext(1, Math.ceil((c.loopDur + 1) * sr), sr);
+      scheduleTheme(ctx, ctx.destination, th, 0);
+      return ctx.startRendering().then(function (buf) {
+        var a = analyse(buf.getChannelData(0), sr);
+        out.push({ id: id, title: th.title, bpm: th.bpm, key: th.key, bars: c.bars, notes: c.lead.length + c.bass.length + c.arp.length + c.drums.length,
+          loopS: +c.loopDur.toFixed(2), peakDb: +a.peakDb.toFixed(1), rmsDb: +a.rmsDb.toFixed(1), errors: c.errors });
+      });
+    });
+  }, Promise.resolve()).then(function () {
+    var tb = document.querySelector('#music-table tbody');
+    tb.innerHTML = '';
+    out.forEach(function (r) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + r.id + '</td><td class="l">' + r.title + '</td><td>' + r.bpm + '</td><td class="l">' + r.key + '</td><td>' + r.bars +
+        '</td><td>' + r.notes + '</td><td>' + r.loopS + '</td><td class="' + (r.peakDb <= -6 ? 'ok' : 'bad') + '">' + r.peakDb + '</td><td>' + r.rmsDb +
+        '</td><td class="l ' + (r.errors.length ? 'bad' : 'ok') + '">' + (r.errors.length ? r.errors.join('; ') : '✓ no errors') + '</td>';
+      tb.appendChild(tr);
+    });
+    status.textContent = out.length + ' themes rendered.';
+    return out;
+  });
+}
+
+/* =====================================================================================
+ * Live playback (needs a click) + UI
+ * ===================================================================================== */
+var live = null;
+function liveCtx() {
+  if (!live) {
+    var ctx = new AudioContext(), master = ctx.createGain(), lim = ctx.createDynamicsCompressor();
+    lim.threshold.value = -8; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.15;
+    master.connect(lim); lim.connect(ctx.destination);
+    var sfx = ctx.createGain(), vox = ctx.createGain(), mus = ctx.createGain(), dry = ctx.createGain();
+    sfx.connect(master); vox.connect(master); mus.connect(master); dry.connect(ctx.destination);
+    live = { ctx: ctx, master: master, sfx: sfx, voice: vox, music: mus, dry: dry, musicRun: null };
+  }
+  if (live.ctx.state === 'suspended') live.ctx.resume();
+  var mix = document.getElementById('chk-mix').checked;
+  live.master.gain.value = mix ? 0.7 : 1; live.sfx.gain.value = mix ? 0.8 : 1; live.voice.gain.value = mix ? 0.8 : 1; live.music.gain.value = mix ? 0.35 : 1;
+  return live;
+}
+function mumbleId() { return Math.max(0, Math.min(79, Number(document.getElementById('inp-mumble').value) || 0)); }
+function playSfx(id, bus) {
+  var L = liveCtx(), t = L.ctx.currentTime + 0.02;
+  var out = bus === 'voice' ? L.voice : L.sfx;
+  if (id === 'builder-low') { SFX[id](L.ctx, out, t, 1); SFX[id](L.ctx, out, t + 0.3, 7 / 6); SFX[id](L.ctx, out, t + 0.6, 4 / 3); return; }
+  SFX[id](L.ctx, out, t, bus === 'voice' ? voicePitch(mumbleId()) : undefined);
+}
+function playMusic() {
+  stopMusic();
+  var L = liveCtx(), th = MUSIC[document.getElementById('sel-theme').value], run = { stop: false, gain: L.ctx.createGain() };
+  run.gain.connect(L.music);
+  var next = L.ctx.currentTime + 0.1;
+  function pump() {
+    if (run.stop) return;
+    if (next - L.ctx.currentTime < 1.5) { next += scheduleTheme(L.ctx, run.gain, th, next); if (!th.loop) { run.stop = true; return; } }
+    run.timer = setTimeout(pump, 250);
+  }
+  pump();
+  L.musicRun = run;
+  document.getElementById('music-status').textContent = 'Playing “' + th.title + '” (' + th.bpm + ' BPM, ' + th.key + ')';
+}
+function stopMusic() {
+  if (live && live.musicRun) {
+    var r = live.musicRun; r.stop = true; clearTimeout(r.timer);
+    r.gain.gain.setTargetAtTime(0, live.ctx.currentTime, 0.05);
+    setTimeout(function () { r.gain.disconnect(); }, 400);
+    live.musicRun = null;
+    document.getElementById('music-status').textContent = 'Stopped.';
+  }
+}
+function drawRoll() {
+  var th = MUSIC[document.getElementById('sel-theme').value], c = compileTheme(th), cv = document.getElementById('roll'), g = cv.getContext('2d');
+  var W = cv.width, H = cv.height, steps = c.bars * 16, sx = (W - 40) / steps, drumH = 36;
+  var all = c.lead.concat(c.bass, c.arp), lo = 127, hi = 0;
+  all.forEach(function (n) { lo = Math.min(lo, n.midi); hi = Math.max(hi, n.midi); });
+  lo -= 1; hi += 1;
+  var sy = (H - drumH - 16) / (hi - lo + 1);
+  g.fillStyle = '#0c0d1f'; g.fillRect(0, 0, W, H);
+  for (var b = 0; b <= c.bars; b++) { g.fillStyle = b % 4 === 0 ? '#3a3f78' : '#23264d'; g.fillRect(30 + b * 16 * sx, 0, 1, H); }
+  g.fillStyle = '#6e6aa3'; g.font = '11px ui-monospace, monospace';
+  for (var m = lo; m <= hi; m++) if (m % 12 === 0) { var y = H - drumH - 8 - (m - lo + 1) * sy; g.fillRect(30, y + sy, W - 40, 1); g.fillText('C' + (m / 12 - 1), 2, y + sy + 4); }
+  function draw(list, mul, col) {
+    g.fillStyle = col;
+    list.forEach(function (n) { var y = H - drumH - 8 - (n.midi - lo + 1) * sy; g.fillRect(30 + n.step * mul * sx + 1, y, Math.max(2, n.len * mul * sx - 2), Math.max(3, sy - 1)); });
+  }
+  draw(c.arp, 1, '#8fd3ff'); draw(c.bass, 4, '#ff8a6b'); draw(c.lead, 2, '#ffc53d');
+  var lanes = { k: 0, s: 1, h: 2 };
+  g.fillStyle = '#9a95c9';
+  c.drums.forEach(function (d) { g.fillRect(30 + d.step * sx, H - drumH + 4 + lanes[d.kind] * 10, Math.max(2, sx - 1), 7); });
+  g.fillStyle = '#c3bee3'; g.fillText('k', 18, H - drumH + 11); g.fillText('s', 18, H - drumH + 21); g.fillText('h', 18, H - drumH + 31);
+  g.fillStyle = '#f4f1ff'; g.font = '600 13px system-ui, sans-serif';
+  g.fillText(th.title + ' · ' + th.bpm + ' BPM · ' + th.key + ' · ' + c.bars + ' bars · lead ' + th.lead + (th.echo ? ' + echo' : ''), 36, 16);
+}
+function buildUi() {
+  var groups = [['UI', 'UI feedback (sfx bus)'], ['Cue', 'Gameplay cues'], ['Event', 'Events: barks, hazards, traps, stingers']];
+  var root = document.getElementById('cards');
+  groups.forEach(function (gr) {
+    var h = document.createElement('h3'); h.textContent = gr[1]; root.appendChild(h);
+    var grid = document.createElement('div'); grid.className = 'grid'; root.appendChild(grid);
+    META.filter(function (m) { return m[1] === gr[0]; }).forEach(function (m) {
+      var card = document.createElement('div'); card.className = 'card';
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = '▶ ' + m[0];
+      b.setAttribute('aria-label', 'Play ' + m[0] + (m[4] ? ', caption ' + m[4] : ''));
+      b.addEventListener('click', function () { playSfx(m[0], m[2]); });
+      var cap = document.createElement('div'); cap.className = 'cap';
+      cap.innerHTML = (m[4] ? m[4] : '<span style="color:var(--muted);font-weight:400">no caption</span>') + '<span class="tag' + (m[2] === 'voice' ? ' voice' : '') + '">' + m[2] + '</span>';
+      var vis = document.createElement('div'); vis.className = 'vis'; vis.textContent = m[3] + ' → ' + m[5];
+      var meas = document.createElement('div'); meas.className = 'm'; meas.setAttribute('data-m', m[0]); meas.textContent = 'not measured';
+      card.append(b, cap, vis, meas); grid.appendChild(card);
+    });
+  });
+  var sel = document.getElementById('sel-theme');
+  Object.keys(MUSIC).forEach(function (id) { var o = document.createElement('option'); o.value = id; o.textContent = id + ' — ' + MUSIC[id].title; sel.appendChild(o); });
+  sel.value = 'mossgrove';
+  sel.addEventListener('change', function () { drawRoll(); if (live && live.musicRun) playMusic(); });
+  document.getElementById('btn-measure').addEventListener('click', function () { measureAll(); });
+  document.getElementById('btn-play').addEventListener('click', playMusic);
+  document.getElementById('btn-stop').addEventListener('click', stopMusic);
+  document.getElementById('btn-check').addEventListener('click', function () { checkMusic(); });
+  var inp = document.getElementById('inp-mumble');
+  function showPitch() { var s = voicePitchSemitones(mumbleId()); document.getElementById('pitch-out').textContent = 'voice ' + (s > 0 ? '+' : s < 0 ? '−' : '±') + Math.abs(s) + ' st'; }
+  inp.addEventListener('input', showPitch); showPitch();
+  drawRoll();
+}
+buildUi();
+window.measureAll = measureAll; // → Promise<Array<{id, tier, bus, G, durMs, peakDb, rmsDb, stDb, pass}>>
+window.checkMusic = checkMusic; // → Promise<Array<{id, title, bpm, key, bars, notes, loopS, peakDb, rmsDb, errors}>>
+window.__lab = { SFX: SFX, META: META, MUSIC: MUSIC, TARGET: TARGET, measureAll: measureAll, checkMusic: checkMusic, voicePitch: voicePitch };
+</script>
+</body>
+</html>

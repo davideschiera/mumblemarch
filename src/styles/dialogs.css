@@ -1,0 +1,200 @@
+/*
+ * Help screen (DESIGN §7.10, §5.4 "How to play") and every dialog/overlay style this worker
+ * owns. The base `.dialog` / `.dialog::backdrop` / `.dialog__actions` rules (surface panel, 60%
+ * black backdrop, §5.4) live in layout.css (E2b) — this file only adds what's specific to the
+ * pieces below. Only var(--token) values (DESIGN §5.2). Owner: E3b2.
+ */
+
+/* ── Dialog title / message, shared by every native <dialog> built here ─────────────────── */
+.dialog__title {
+  margin: 0 0 var(--space-2);
+  font: 800 var(--text-xl) / 1.2 var(--font-ui);
+  color: var(--color-accent);
+}
+
+.dialog__message {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+}
+
+/* In-game overlays (briefing/help/settings, §6.1.1 B/H): fits at 720px tall with internal scroll. */
+.dialog--overlay {
+  width: min(90vw, 60rem);
+  max-height: min(88vh, 640px);
+  overflow-y: auto;
+}
+
+/* ── Pause menu (§5.4) ───────────────────────────────────────────────────────────────────── */
+.dialog--pause {
+  width: min(90vw, 24rem);
+}
+
+.pause-menu__objective {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+  font: 700 var(--text-md) / 1.4 var(--font-mono);
+  text-align: center;
+}
+
+.pause-menu__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pause-menu__actions .button {
+  width: 100%;
+}
+
+.cheat-sheet {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) 0 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.cheat-sheet li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* ── Key chips: the pause-menu cheat-sheet and the Help controls tables ─────────────────── */
+.kbd {
+  display: inline-block;
+  min-width: 1.8em;
+  padding: 1px 6px;
+  text-align: center;
+  font: 600 var(--text-sm) / 1.4 var(--font-mono);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+}
+
+/* ── Help screen (DESIGN §7.10) ──────────────────────────────────────────────────────────── */
+.screen--help .help__columns {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-8);
+  margin: var(--space-4) 0;
+  text-align: left;
+}
+
+.help__block {
+  margin-bottom: var(--space-6);
+}
+
+.help__block h2,
+.help__block h3,
+.help__block h4,
+.help__block h5 {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.help__quickstart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.help__steps {
+  margin: 0;
+  padding-left: 1.25em;
+}
+
+.skills-help {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.skills-help__card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.skills-help__icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.skills-help__name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-1);
+  font-weight: 700;
+}
+
+.skills-help__desc {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.controls-group {
+  margin-bottom: var(--space-4);
+}
+
+.controls {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.controls th,
+.controls td {
+  padding: var(--space-1) var(--space-2);
+  text-align: left;
+}
+
+.controls th {
+  color: var(--color-text-muted);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.controls td {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.help__assists {
+  margin: 0 0 var(--space-3);
+  padding-left: 1.25em;
+  color: var(--color-text-muted);
+}
+
+.help__link {
+  padding: 0;
+  color: var(--color-info);
+  background: none;
+  border: 0;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+@media (max-width: 56rem) {
+  .screen--help .help__columns,
+  .help__quickstart-grid,
+  .skills-help {
+    grid-template-columns: 1fr;
+  }
+}

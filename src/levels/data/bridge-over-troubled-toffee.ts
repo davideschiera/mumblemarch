@@ -1,0 +1,38 @@
+import type { LevelDef } from '../format.ts';
+
+export const bridgeOverTroubledToffeeLevel: LevelDef = {
+  id: 'bridge-over-troubled-toffee',
+  title: 'Bridge Over Troubled Toffee',
+  tier: 1,
+  hint: 'Hot caramel below, sweet home beyond. Lay a staircase across the gap.',
+  theme: 'sugarworks',
+  width: 480,
+  height: 160,
+  lemmings: 15,
+  saveRequired: 8,
+  releaseRate: 50,
+  timeLimitSeconds: 300,
+  skills: { builder: 5 },
+  entrances: [{ x: 64, y: 32 }],
+  exits: [{ x: 384, y: 64 }],
+  terrain: [
+    { kind: 'rect', x: 0, y: 64, w: 224, h: 16, fill: 'strata' },
+    { kind: 'rect', x: 0, y: 80, w: 40, h: 80, fill: 'strata' },
+    { kind: 'rect', x: 236, y: 64, w: 244, h: 16, fill: 'strata' },
+    { kind: 'rect', x: 440, y: 80, w: 40, h: 80, fill: 'strata' },
+    { kind: 'rect', x: 152, y: 112, w: 8, h: 48, fill: 'bricks' },
+    { kind: 'rect', x: 320, y: 112, w: 8, h: 48, fill: 'bricks' },
+    { kind: 'rect', x: 152, y: 152, w: 176, h: 8, fill: 'bricks' },
+    { kind: 'polygon', points: [[196, 80], [204, 80], [200, 90]] },
+    { kind: 'polygon', points: [[252, 80], [262, 80], [257, 92]] },
+    { kind: 'polygon', points: [[290, 80], [296, 80], [293, 86]] },
+    { kind: 'stamp', stamp: 'mushroom', x: 4, y: 50, scale: 2 },
+    { kind: 'rect', x: 452, y: 38, w: 3, h: 26, fill: 'solid' },
+    { kind: 'ellipse', cx: 453.5, cy: 30, rx: 9, ry: 9, fill: 'strata' },
+    { kind: 'stamp', stamp: 'boulder', x: 150, y: 106 },
+    { kind: 'stamp', stamp: 'boulder', x: 318, y: 106 },
+  ],
+  hazards: [
+    { kind: 'fire', x: 160, y: 128, w: 160, h: 28 },
+  ],
+};

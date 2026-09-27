@@ -1,0 +1,181 @@
+/* App shell, stage and screens. */
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* §5.1: "16 px page padding, 8 px gaps" — the gap only shows on the game screen (its only
+     use of two visible top-level children, #stage + #screen-root; every other screen leaves
+     #stage `hidden`, which drops out of the flex flow, so this gap costs it nothing). */
+  gap: var(--space-2);
+  padding: var(--space-4);
+  min-height: 100vh;
+}
+
+/* VIS-7: centre the game block (canvas + status line + toolbar) vertically when the viewport has
+ * spare height below it. `min-height` (not `height`) on `.app` means the free space `justify-
+ * content: center` distributes is exactly `100vh − content height`: at ×2/small windows the
+ * content already needs ≥100vh, so free space is 0 and this is a no-op — the block stays
+ * top-aligned and the page scrolls, unchanged from before. Scoped to the game screen only (other
+ * screens use their own natural top-of-page flow, DESIGN §5.4) via the same `:has()` pattern
+ * `.screen-root:has(.screen--game)` already uses below. */
+.app:has(.screen--game) {
+  justify-content: center;
+}
+
+.stage {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Utility: match an element's width to the canvas' rendered CSS width at the current integer
+ * scale (DESIGN §5.1 "content column = canvas width, centred"). `--stage-w` is set by
+ * `ui/screens/game.ts` from a ResizeObserver on the stage overlay, which `.stage__overlay`
+ * below always sizes to the canvas; the fallback is the ×2 minimum before that first fires. */
+.stage-width {
+  width: var(--stage-w, 800px);
+  max-width: 100%;
+}
+
+.stage__canvas {
+  display: block;
+  image-rendering: pixelated; /* integer-scaled pixel art, no smoothing */
+  border: 2px solid var(--color-border);
+  background: #000;
+  cursor: crosshair;
+}
+
+.screen-root {
+  width: min(100%, 72rem);
+}
+
+/* The game screen's column is the canvas' own width (up to 1600px at ×4, DESIGN §5.1 table),
+ * wider than every other screen's fixed reading column above. */
+.screen-root:has(.screen--game) {
+  width: min(100%, 1600px);
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.screen__title {
+  font-size: var(--text-xl);
+}
+
+.screen--title .screen__title {
+  font-size: var(--text-hero);
+  color: var(--color-accent);
+  letter-spacing: 0.04em;
+}
+
+.screen__lead {
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
+}
+
+.menu {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.level-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: 0;
+}
+
+.level-card {
+  font: inherit;
+  display: grid;
+  gap: var(--space-1);
+  min-width: 12rem;
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.level-card__state {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: var(--space-1) var(--space-4);
+}
+
+.facts dd {
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
+.dialog {
+  z-index: var(--z-dialog);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.boot {
+  color: var(--color-text-muted);
+}
+
+/* Stage overlay: the box hugs the canvas exactly, so `.stage__overlay` (absolute, inset 0)
+ * always covers it pixel-for-pixel at every scale. Plates inside it (overlays.css) position
+ * themselves absolutely against this box; it carries no layout of its own beyond that (and no
+ * pointer events, so clicks/drags reach the canvas underneath). */
+.stage__box {
+  position: relative;
+}
+
+.stage__overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* ── Game screen (DESIGN §5.1): the HUD row + toolbar sit directly under the canvas, matching
+ * its width (`.stage-width`) and centred by `.screen`'s own `align-items: center`. */
+.screen--game {
+  gap: var(--space-2);
+}
+
+.game-hud {
+  display: flex;
+  flex-wrap: wrap; /* ×2: the minimap well drops under the status line (§5.1) */
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+/* Plain block (not a flex container): `.toolbar` (hud.css) is itself a `width: 100%` flex item
+ * with `container-type: inline-size` for its own internal @container wrap query — nesting that
+ * inside a flex `justify-content: center` here collapsed it to a min-content width in testing
+ * (the container-type/flex-basis interaction), so this just hands it a block-level 100%. */
+.game-toolbar {
+  width: var(--stage-w, 800px);
+  max-width: 100%;
+}

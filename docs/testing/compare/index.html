@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mumblemarch vs the 1991 original: side-by-side</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 16px; background: #14122b; color: #ece8ff; font: 15px/1.45 system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  section.pair { border: 1px solid #4a4380; border-radius: 8px; padding: 12px; margin: 0 0 24px; background: #1c1938; width: 1360px; box-sizing: border-box; }
+  section.pair h2 { font-size: 17px; margin: 0 0 8px; }
+  .row { display: flex; gap: 12px; align-items: flex-start; }
+  figure { margin: 0; }
+  figcaption { font-size: 12px; color: #b8b0e0; margin-top: 4px; }
+  .ref img { height: 360px; width: auto; image-rendering: pixelated; display: block; border: 1px solid #555; }
+  .ours img { height: 360px; width: auto; display: block; border: 1px solid #555; }
+  ul { margin: 10px 0 0; padding-left: 20px; }
+  li { margin: 2px 0; }
+  .m { color: #7ee2a0; font-weight: 600; }
+  .i { color: #8fd0ff; font-weight: 600; }
+  .g { color: #ffb36b; font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>Mumblemarch vs <i>Lemmings</i> (1991) references — T6 spirit &amp; visual comparison</h1>
+
+<section class="pair" id="p01" aria-label="Pair 01">
+  <h2>01 · Gameplay: playfield + status line + skill panel + minimap</h2>
+  <div class="row">
+    <figure class="ref"><img src="../../research/reference/01-gameplay-panel.png" alt="Reference 01"><figcaption>Reference (Amiga, 320×200)</figcaption></figure>
+    <figure class="ours"><img src="ours/01-gameplay-hud.png" alt="Ours 01"><figcaption>Mumblemarch — L3 "Bridge Over Troubled Toffee", builder bridge done, 11 out</figcaption></figure>
+  </div>
+  <ul>
+    <li><span class="m">Matches:</span> same stack (playfield → status line → one-row panel with minimap); RR −/value/+ then 8 skills in the original order, then pause and nuke.</li>
+    <li><span class="m">Matches:</span> small critters strung out on a ledge, builder bridge over a hazard gap, dark sky; about 1/16 of the playfield height.</li>
+    <li><span class="i">Intentional:</span> labelled, key-numbered 80×88 buttons, "Saved 1 · need 8" with a meter instead of IN %, Fast button, "Pop all", ☰ menu; bark caption "« Wheee! »".</li>
+    <li><span class="g">Gap:</span> the HUD is about 25% of the game height rather than 20%, and it reads more like a web toolbar than the chunky pixel panel. The minimap for a 480-wide level is a small strip in a mostly empty well.</li>
+  </ul>
+</section>
+
+<section class="pair" id="p02" aria-label="Pair 02">
+  <h2>02 · A crowd held by a blocker, builder stairs, hover box + status label</h2>
+  <div class="row">
+    <figure class="ref"><img src="../../research/reference/02-busy-builders.png" alt="Reference 02"><figcaption>Reference (Amiga): "WALKER 6 OUT 78"</figcaption></figure>
+    <figure class="ours"><img src="ours/02-crowd-blocker-builder.png" alt="Ours 02"><figcaption>Mumblemarch — L10 "Double Boiler", STOP-paddle blocker, builder, bomber fuse "2", hover bracket</figcaption></figure>
+  </div>
+  <ul>
+    <li><span class="m">Matches:</span> hover bracket framing the critter under the cursor, and the status line names it ("Walker", yellow); hatch top, exit off to the side.</li>
+    <li><span class="m">Matches:</span> the crowd presses on the blocker; builder stairs are pale planks; bomber countdown digit above the head.</li>
+    <li><span class="i">Intentional:</span> STOP paddle for the blocker, count badges on skills, "0" hatched when a skill is spent; pause pill "Paused — you can still assign skills".</li>
+    <li><span class="g">Gap:</span> the crowd is far smaller (12–40 per level vs 78 here), so the "sea of critters" moment is rarer.</li>
+  </ul>
+</section>
+
+<section class="pair" id="p03" aria-label="Pair 03">
+  <h2>03 · Level briefing</h2>
+  <div class="row">
+    <figure class="ref"><img src="../../research/reference/03-level-preview.png" alt="Reference 03"><figcaption>Reference (Amiga): level 1 "Just dig!"</figcaption></figure>
+    <figure class="ours"><img src="ours/03-briefing.png" alt="Ours 03"><figcaption>Mumblemarch — Level 1 "Spade Expectations"</figcaption></figure>
+  </div>
+  <ul>
+    <li><span class="m">Matches:</span> same order: level number + pun title that is the hint, a thumbnail of the level, then count / save / release rate / time / rating.</li>
+    <li><span class="i">Intentional:</span> save as a count "5 (50%)", tier "Breezy", a skills chip ("Digger ×5"), hint behind "Show hint", a real "Let's march!" button instead of "press mouse button".</li>
+    <li><span class="g">Gap:</span> a plain dark page with stat tiles; it has none of the textured backdrop or rainbow lines, so it feels like a settings card rather than a title card. The lower half of the viewport is empty at 1440×900.</li>
+  </ul>
+</section>
+
+<section class="pair" id="p04" aria-label="Pair 04">
+  <h2>04 · Title / main menu</h2>
+  <div class="row">
+    <figure class="ref"><img src="../../research/reference/04-title-menu.png" alt="Reference 04"><figcaption>Reference (Amiga): logo + sign-holding critters + credits ticker</figcaption></figure>
+    <figure class="ours"><img src="ours/04-title.png" alt="Ours 04"><figcaption>Mumblemarch — title</figcaption></figure>
+  </div>
+  <ul>
+    <li><span class="m">Matches:</span> a big chunky logo (letters bob ±3 px like a marching line) and critters marching along a grassy strip.</li>
+    <li><span class="i">Intentional:</span> our own name and logo; Start / Levels / How to play / Settings instead of 1P / 2P / password / music / rating signs; no passwords.</li>
+    <li><span class="g">Gap:</span> far less charm: flat buttons, tiny marchers, no characters interacting with the menu. The "Sound starts…" note overlaps the grass strip (CMP-2).</li>
+  </ul>
+</section>
+
+<section class="pair" id="p05" aria-label="Pair 05">
+  <h2>05 · Results after a win</h2>
+  <div class="row">
+    <figure class="ref"><img src="../../research/reference/05-results.png" alt="Reference 05"><figcaption>Reference (Amiga): headline / needed / rescued / "Superb!" / access code</figcaption></figure>
+    <figure class="ours"><img src="ours/05-results.png" alt="Ours 05"><figcaption>Mumblemarch — L1 won 10/10</figcaption></figure>
+  </div>
+  <ul>
+    <li><span class="m">Matches:</span> the same order: headline, then saved vs needed, then a graded one-liner, then what next.</li>
+    <li><span class="i">Intentional:</span> our own copy ("Every single mumble made it home. Take a bow!"), a meter with a notch at the requirement, New best / Beat the clock, and explicit Next / Try again / Levels buttons instead of an access code.</li>
+    <li><span class="g">Gap:</span> "needed 5" is printed twice (in the big line and under the meter). The saved mumbles hop in a small row, but the page is otherwise empty below.</li>
+  </ul>
+</section>
+
+<section class="pair" id="p06" aria-label="Pair 06">
+  <h2>06 · Dark theme crowd with hover / status label</h2>
+  <div class="row">
+    <figure class="ref"><img src="../../research/reference/06-dos-vga-busy-hover.png" alt="Reference 06"><figcaption>Reference (DOS VGA): "WALKER 1 OUT 50", only basher left (35)</figcaption></figure>
+    <figure class="ours"><img src="ours/06-dark-crowd-hover.png" alt="Ours 06"><figcaption>Mumblemarch — L12 "Last Shift at the Foundry", 60 out, hover on a 6-deep bunch</figcaption></figure>
+  </div>
+  <ul>
+    <li><span class="m">Matches:</span> near-black background, a long stream of about 60 critters, hover bracket plus "Walker ×6" (the original's "WALKER 6" count semantics).</li>
+    <li><span class="m">Matches:</span> empty skills are unmistakable (hatched, dimmed, "0"), like the original's blank counts; RR at 99 with a 0.2 s interval sub-label.</li>
+    <li><span class="i">Intentional:</span> brick-red foundry and molten hazard instead of crystal; custom bracket art; Climber selected with a yellow frame and a ▲ notch.</li>
+    <li><span class="g">Gap:</span> at RR 99 the crowd is a perfectly even, lock-step row that reads like a fence pattern. The disabled "+" shows "🔒 min" at the maximum (CMP-1).</li>
+  </ul>
+</section>
+</body>
+</html>

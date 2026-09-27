@@ -1,0 +1,241 @@
+/* Screens (title, level select, briefing, results, help, settings). Owner: E3a/E3b.
+ * This file: TITLE + RESULTS, plus a small BRIEFING hint-disclosure rule (PLAY-A3; FX2)
+ * (DESIGN §5.4 rows Title/Results/Briefing, §9.2, §9.5).
+ * `.screen`, `.screen__title`, `.screen__lead`, `.menu`, `.button*` are shared (layout.css /
+ * base.css, not owned here) — rules below only add to or (for the title logo, which needs the
+ * §5.2 "sticker" treatment) more-specifically override them. */
+
+/* ── Title: marching-letter logo ─────────────────────────────────────────────────────────── */
+.screen--title .screen__title.title-logo {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: var(--font-display-weight);
+  letter-spacing: var(--letter-spacing-display);
+  line-height: 1.15;
+  color: var(--color-accent);
+  paint-order: stroke fill;
+  -webkit-text-stroke: var(--text-stroke-display);
+  text-shadow: var(--text-shadow-display);
+}
+
+.title-logo span {
+  display: inline-block;
+}
+
+/* Each letter offset ±3px vertically, like a marching line (DESIGN §5.4). */
+.title-logo span:nth-child(odd) {
+  transform: translateY(-3px);
+}
+
+.title-logo span:nth-child(even) {
+  transform: translateY(3px);
+}
+
+.title-tagline {
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.title-menu {
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+/* Prominent menu button (DESIGN §5.4 Title "buttons 320×56"; reused by Results below). Not
+ * defined elsewhere in the project yet, so this is its one definition. */
+.button--wide {
+  width: 20rem;
+  max-width: 100%;
+  min-height: 56px;
+  font-size: var(--text-lg);
+}
+
+.title-strip {
+  display: block;
+  /* ×2 fallback (800×64) before JS measures the column and snaps to an integer multiple of the
+   * 400×32 backing store (DESIGN §5.1 integer scaling); title.ts keeps this live via a
+   * ResizeObserver on the section, matching the `.stage-width`/`--stage-w` pattern (layout.css). */
+  width: 800px;
+  height: 64px;
+  max-width: 100%;
+  image-rendering: pixelated;
+  margin-top: var(--space-4);
+}
+
+.title-sound-note {
+  /* Below the strip on the page background, not overlapping its grass band (DESIGN §5.4/§4.10:
+   * canvas strip, then small text; contrast ≥ 4.5:1). */
+  margin-top: var(--space-2);
+  color: var(--color-text-faint);
+  font-size: var(--text-sm);
+}
+
+/* ── Results ──────────────────────────────────────────────────────────────────────────────── */
+.results-eyebrow {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* Sized on its own (not the shared --text-xl heading size): the §5.2 sticker stroke needs a
+ * big glyph to read as an outline rather than a solid blob. Colour is never the only cue — the
+ * ✓/↺ glyph and the headline text carry the same success/failure meaning.
+ *
+ * VIS-2: the token `--text-stroke-display`/`--text-shadow-display` stroke colour is the plum
+ * `--color-accent-contrast` (#2a1433) — nearly identical to this screen's own `--color-bg`
+ * (#14112a), so it measured 1.09:1 (axe color-contrast wants ≥3:1). Overridden here to
+ * `--color-border-strong` (#a59de0, 7.4:1 on this bg) instead of changing the shared token (which
+ * other "sticker" text sits on lighter surfaces where the plum stroke is fine) — same size/shape,
+ * just a stroke colour that actually contributes contrast on this particular dark screen. The
+ * success/failure FILL colour (`.results-headline--success/--fail`) is unchanged. */
+.screen--results .screen__title.results-headline {
+  font-family: var(--font-display);
+  font-weight: var(--font-display-weight);
+  letter-spacing: var(--letter-spacing-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1.15;
+  paint-order: stroke fill;
+  -webkit-text-stroke: 0.18em var(--color-border-strong);
+  text-shadow: 0 0.09em 0 var(--color-border-strong);
+}
+
+.results-headline--success {
+  color: var(--color-success);
+}
+
+.results-headline--fail {
+  color: var(--color-warning);
+}
+
+.results-headline__icon {
+  margin-right: var(--space-2);
+}
+
+.results-score {
+  font: 800 var(--text-2xl) / 1.2 var(--font-ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.results-meter {
+  position: relative;
+  width: min(100%, 35rem);
+  height: 20px;
+  margin-top: var(--space-2);
+  background: var(--color-surface-sunken);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-pill);
+}
+
+.results-meter__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--color-success);
+  border-radius: var(--radius-pill);
+}
+
+/* The notch: a plain vertical tick, so the requirement reads by shape, not colour alone. */
+.results-meter__notch {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 4px;
+  background: var(--color-text);
+  border-radius: 2px;
+}
+
+.results-needed {
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.results-badges {
+  margin-top: var(--space-1);
+}
+
+.results-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font: 700 var(--text-xs) / 1 var(--font-ui);
+  letter-spacing: 0.03em;
+  border-radius: var(--radius-pill);
+}
+
+.results-verdict {
+  max-width: 40ch;
+  font-size: var(--text-xl);
+}
+
+.results-note {
+  margin-top: calc(-1 * var(--space-2));
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.results-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+}
+
+.results-hint__text {
+  max-width: 40ch;
+  color: var(--color-text-muted);
+}
+
+/* ── Results decor: saved mumbles hop (DESIGN §7.4 — static under reduced motion) ──────────── */
+.results-hop {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.results-hop__mumble {
+  display: block;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  animation: results-hop 900ms ease-in-out infinite;
+}
+
+@keyframes results-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(-6px);
+  }
+}
+
+:root[data-motion='reduce'] .results-hop__mumble {
+  animation: none;
+}
+
+/* ── Briefing: "Show hint" disclosure chevron (PLAY-A3) ──────────────────────────────────────
+ * The WAI-ARIA APG disclosure pattern keeps the button's own label fixed ("Show hint") and its
+ * state in `aria-expanded` (DESIGN §5.4) — that markup is unchanged. This purely decorative
+ * `aria-hidden` chevron just flips to match, on the briefing screen and the in-game B overlay
+ * alike (both are built by the same `createBriefingScreen`, `ui/screens/briefing.ts`). */
+.briefing__hint-chevron {
+  display: inline-block;
+  transform: rotate(0deg);
+}
+
+.briefing__hint-toggle[aria-expanded='true'] .briefing__hint-chevron {
+  transform: rotate(90deg);
+}
+
+:root:not([data-motion='reduce']) .briefing__hint-chevron {
+  transition: transform 150ms ease-out;
+}
